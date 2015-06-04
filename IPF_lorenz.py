@@ -16,7 +16,7 @@ ref_param.set_verbose(False)
 ndim = ref_param.get_dim()
 
 
-n_t = 100
+n_t = 1000
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
@@ -60,6 +60,8 @@ plot_tools.multiplot3(x,y,z,['-r','--k'])
 plot_tools.multiplot1(((traj[0,:],rec_traj[0,:])),['-r','--k'])
 
 plot_tools.multiplot1(x,['-r','-k'])
+
+
 issave = False
 if issave is True:
 	mydate = time.strftime("%Y_%m_%d_%Hh%M")

@@ -42,6 +42,24 @@ def kp(f,point,t,dt,g=np.sqrt(2)):
 
 	return point+dt*(fps + fp)/2.0 + mrand(mean,cov),pstar,fp,fps
 
+def P_int(f,t,dt,g,X,Xp05,Xp1):
+# proba that (Xp05,Xp1) corresponds to transport of X by f, after a time dt.
+#Klauder perterson scheme
+
+	fX = f(X,t)
+	P1 = norme_vec( Xp05 - X - dt * fX )**2.0 / (2.0 * dt * g * g)
+
+	P2 = norme_vec( Xp1 - X - dt * ( fX + f(Xp05,t) )/2.0 )**2.0 / (2.0 * dt * g * g)
+
+	return P1+P2
+
+def P_obs(h,t,s,X,y):
+# proba that the measure of X corresponds to observation y
+
+	P = norme_vec(h(X,t) - y)**2.0 / (2.0  * s * s)
+	return P
+
+
 def ressample(X,w):
 # from M.S. Arulampalam et al., A tutorial on particle filters for online nonlinear / non-Gaussian Bayesian tracking, IEEE Trans. Sign. Proc.
 	Ns = w.size
@@ -100,7 +118,7 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
 	xi = 0.0 
 	for i in range(ndim): 
 		gamma = max(abs(H[i, i]), gamma) 
-		for j in range(i+1, n): 
+		for j in range(i+1, ndim): 
 			xi = max(abs(H[i, j]), xi) 
 
 # Identify delta and beta. 
@@ -119,7 +137,7 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
 	for j in range(ndim): 
 # Row and column swapping, find the index > j of the largest diagonal element. 
 		q = j 
-		for i in range(j+1, n): 
+		for i in range(j+1, ndim): 
 			if np.abs(a[i, i]) >= np.abs(a[q, q]): 
 				q = i 
 
@@ -144,14 +162,14 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
  
 # Calculate dj. 
 		theta_j = 0.0 
-		if j < n-1: 
-			for i in range(j+1, n): 
+		if j < ndim-1: 
+			for i in range(j+1, ndim): 
 				theta_j = np.max(theta_j, np.abs(a[j, i])) 
 		dj = np.max(np.abs(a[j, j]), (theta_j/beta)**2, delta) 
 
 # Calculate row j of r and update a. 
 		r[j, j] = sqrt(dj)     # Damned sqrt introduces roundoff error. 
-		for i in range(j+1, n): 
+		for i in range(j+1, ndim): 
 			r[j, i] = a[j, i] / r[j, j] 
 			for k in range(j+1, i+1): 
 				a[i, k] = a[k, i] = a[k, i] - r[j, i] * r[j, k]     # Keep matrix a symmetric. 
@@ -311,29 +329,38 @@ class particle:
 
 	
 	def F(self,X):
+		""" Xp05 = X[0:self.ndim]
+		Xp1 = X[self.ndim:]
+		=> the Klauder perterson scheme is used, and is a two-steps scheme
+		"""
 		if self.ptype is True:
 			print('Reference particle!')
 		else:
 
-			Xn = self.X
-			t = self.t
-			dt = self.dt
+#			Xn = self.X
+#			t = self.t
+#			dt = self.dt
 
-			Xp05 = X[0:self.ndim]
-			Xp1 = X[self.ndim:]
+#			Xp05 = X[0:self.ndim]
+#			Xp1 = X[self.ndim:]
+
 			
 
-			fX = self.fdyn(Xn,t)
-#			F1 = norme_vec( np.dot(self.precond,Xp05 - Xn - dt * fX) )**2.0 / (2.0 * dt * self.g * self.g)
-			F1 = norme_vec( Xp05 - Xn - dt * fX )**2.0 / (2.0 * dt * self.g * self.g)
-			fXs = self.fdyn(Xp05,t)
-#			F2 = norme_vec( np.dot(self.precond,Xp1 - Xn - dt * (fX + fXs)/2.0) )**2.0 / (2.0 * dt * self.g * self.g)
-			F2 = norme_vec( Xp1 - Xn - dt * (fX + fXs)/2.0 )**2.0 / (2.0 * dt * self.g * self.g)
-			F3 = norme_vec(self.h_obs(Xp1,t) - self.Yp1)**2.0 / (2.0 * dt * self.s * self.s)
-			Fx = F1+F2+F3
-			if self.verbose is True:
-				s = 'X: ' + str(np.around(X,decimals=3)) + ' F(X): ' + str(np.around(Fx,decimals=3)) + ' F1: ' + str(np.around(F1,decimals=3)) + ' F2: ' + str(np.around(F2,decimals=3)) + ' F3: ' + str(np.around(F3,decimals=3))
-				print(s)
+#			fX = self.fdyn(Xn,t)
+##			F1 = norme_vec( np.dot(self.precond,Xp05 - Xn - dt * fX) )**2.0 / (2.0 * dt * self.g * self.g)
+#			F1 = norme_vec( Xp05 - Xn - dt * fX )**2.0 / (2.0 * dt * self.g * self.g)
+#			fXs = self.fdyn(Xp05,t)
+##			F2 = norme_vec( np.dot(self.precond,Xp1 - Xn - dt * (fX + fXs)/2.0) )**2.0 / (2.0 * dt * self.g * self.g)
+#			F2 = norme_vec( Xp1 - Xn - dt * (fX + fXs)/2.0 )**2.0 / (2.0 * dt * self.g * self.g)
+#			F3 = norme_vec(self.h_obs(Xp1,t) - self.Yp1)**2.0 / (2.0 * dt * self.s * self.s)
+			Fint = P_int(self.fdyn,self.t,self.dt,self.g,self.X,X[0:self.ndim],Xp1 = X[self.ndim:])
+			Fobs = P_obs(self.h_obs,self.t,self.s,X[self.ndim:],self.Yp1)
+			Fx = Fint+Fobs
+			s = 'F: ' + str(Fint) + '   ' + str(Fobs)
+#			print(s)
+#			if self.verbose is True:
+#				s = 'X: ' + str(np.around(X,decimals=3)) + ' F(X): ' + str(np.around(Fx,decimals=3)) + ' F1: ' + str(np.around(F1,decimals=3)) + ' F2: ' + str(np.around(F2,decimals=3)) + ' F3: ' + str(np.around(F3,decimals=3))
+#				print(s)
 
 			return Fx
 
@@ -535,6 +562,9 @@ class density_particle:
 
 		self.w = np.zeros(n_particle)
 
+	def __len__(self):
+		return self.n_particle
+
 	def next_step(self):
 	#it of main particle
 		self.p_ref.next_step()
@@ -603,7 +633,5 @@ class density_particle:
 	def get_current_positions(self):
 	# position BEFORE ressampling
 		return self.X_ips
-
-
 
 
