@@ -16,7 +16,7 @@ ref_param.set_verbose(False)
 ndim = ref_param.get_dim()
 
 
-n_t = 1000
+n_t = 200
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
@@ -36,6 +36,10 @@ traj[:,0] = density.get_current_position()
 
 for i_t in range(1,n_t):
 	print(i_t)
+	
+	density.give_obs(False)
+	if np.mod(i_t,2)==0:
+		density.give_obs(True)
 	density.next_step() # physical part
 
 # for verifications and plot
