@@ -10,16 +10,17 @@ point = np.array([ -4.4090617 ,   0.94099541,  31.65011104])
 
 
 ref_param = d.particle_parameters(True)
-n_particle = 15
+n_particle = 1
 ps_param = [d.particle_parameters(False) for i in range(n_particle)]
 ref_param.set_verbose(False)
 ndim = ref_param.get_dim()
 
 
-n_t = 200
+n_t = 1000
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
+obs = np.zeros((n_t))
 
 isverbose = False
 
@@ -38,11 +39,12 @@ for i_t in range(1,n_t):
 	print(i_t)
 	
 	density.give_obs(False)
-	if np.mod(i_t,2)==0:
+	if np.mod(i_t,5)==0:
 		density.give_obs(True)
 	density.next_step() # physical part
 
 # for verifications and plot
+	obs[i_t] = density.p_ref.get_obs()
 	rec_traj[:,i_t] = density.get_estimate_position()
 	traj[:,i_t] = density.get_current_position()
 #	X_ips = density.get_current_positions()
@@ -59,7 +61,9 @@ for i_p in range(n_particle):
 	x = x + (lpath[i_p][0,:],)
 	y = y + (lpath[i_p][1,:],)
 	z = z + (lpath[i_p][2,:],)
+
 plot_tools.multiplot3(x,y,z,['-r','--k'])
+
 
 plot_tools.multiplot1(((traj[0,:],rec_traj[0,:])),['-r','--k'])
 
@@ -70,17 +74,17 @@ issave = False
 if issave is True:
 	mydate = time.strftime("%Y_%m_%d_%Hh%M")
 	s = '../' + mydate
-	np.savez(s, lp=lp,rec=rec,ref_p=ref_p,ref_param=ref_param)
+	np.savez(s, traj=traj,rec_traj=rec_traj,density=density,lpath=lpath,ref_param=ref_param)
 
 isload = False
 if isload is True:
-	mydate = '2015_06_01_19h37' + 'npz'
-	s = '../'
-	data = nl.load(s)
-	lp = data['lp']
-	rec = data['rec']
-	ref_p = data['ref_p']
+	mydate = '2015_06_07_12h53' + '.npz'
+	s = '../' + mydate
+	data = np.load(s)
+	traj = data['traj']
+	rec_traj = data['rec_traj']
+	rec_traj = data['rec_traj']
+	density = data['density']
+	lpath = data['lpath']
 	ref_param = data['ref_param']
-	n_particle = len(lp)
-	n_t = ref_p.path[:,1].size - 1
 	

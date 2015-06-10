@@ -53,12 +53,14 @@ def multiplot2(a,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 			mci = mark_col[j]
 		except:
 			mci = '-k'
-		ax.plot(a,b[j],mci)
+		ax.plot(a[j],b[j],mci)
 	ax.set_xlabel(a_label)
 	ax.set_ylabel(b_label)
 
 def multiplot1(b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
-	a = np.array(range(0,b[0].size))
+	a = (np.array(range(0,b[0].size)),)
+	for i in range(len(b)-1):
+		a = a + (np.array(range(0,b[0].size)),)
 	fig = multiplot2(a,b,mark_col,a_label,b_label)
 	return fig
 
@@ -78,3 +80,7 @@ def multiplot3(a,b,c,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2',c_label
 	ax.set_ylabel(b_label)
 	ax.set_zlabel(c_label)
 	return fig
+	
+def closeall(n=50):
+	for i in range(n):
+		pyplot.close()

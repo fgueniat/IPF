@@ -330,8 +330,8 @@ class particle:
 				if self.verbose is True:
 					s = 'old point ' + str(self.X) + ' to new point ' + str(self.Xp1)
 					print(s)
-			else:
-				print('to do: store path when estimated')
+#			else:
+#				print('to do: store path when estimated')
 		self.t = self.t + self.dt
 			
 
