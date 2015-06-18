@@ -122,7 +122,14 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
 			xi = max(np.abs(H[i, j]), xi) 
 
 # Identify delta and beta. 
-	delta = eps_machine * np.max(gamma + xi, 1.0) 
+	try:
+		delta = eps_machine * np.max(gamma + xi, 1.0) 
+	except:
+		print(gamma)
+		print(xi)
+		print(eps_machine)
+		delta = eps_machine * np.max(gamma + xi, 1.0) 
+
 	if ndim == 1: 
 		beta = np.sqrt(np.max(gamma, eps_machine)) 
 	else: 
@@ -184,8 +191,9 @@ def norme_vec(a):
 
 class particle_parameters:
 
-	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),sampling = 1,verbose = False,precond = np.array([15.0,15.0,25.0]), fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0)):
+	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),sampling = 1,verbose = False,precond = np.array([15.0,15.0,25.0]), fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
 		self.ptype = ptype # true if real state, false is particle
+		self.objective = objective # DA for data assimilation, filter for filtering
 		self.fdyn = fdyn # dynamical function
 		self.h_obs = h_lorenz # observable function
 		self.dt = dt
@@ -258,13 +266,16 @@ class particle_parameters:
 	def get_dim(self):
 		return self.X.size
 
+	def get_objective(self):
+		return self.objective
 
 class particle:
 
 	def __init__(self,param):
 
 		self.ptype = param.get_type()
-
+		self.objective = param.get_objective()
+		
 		self.ndim = param.get_dim()
 
 		self.g = param.get_var_eq()
@@ -292,12 +303,13 @@ class particle:
 			self.path = self.X
 			self.Yp1 = self.compute_obs(self.Xp1,self.t)
 		else:
+			self.old_weight = 1.0
 			self.weight = 1.0
 			self.eps = np.zeros(2.0*self.ndim)
 
 		self.isready = False # True as soon as a new observation is available
 		self.n_obs = 0 # number of time steps between two observations
-
+		self.intermediate_steps = []
 
 	def compute_obs(self,X,t):
 
@@ -319,21 +331,31 @@ class particle:
 			self.Xp05,self.Xp1 = self.integration(self.X,self.t)
 			self.path = np.vstack((self.path,self.Xp1))
 			self.Yp1 = self.compute_obs(self.Xp1,self.t)
+			
 		else:
-			if self.isready is True:
+			if self.objective == 'filter':
+				if self.isready is True:
+					self.F_min()
+					Xp1,self.weight = self.sample()
+					self.X0 = Xp1[0:self.ndim]
+					self.Xp1 = Xp1[-self.ndim:]
+					if self.n_obs>1:
+						self.intermediate_steps = np.array([Xp1[2*i*self.ndim:(2*i+1)*self.ndim] for i in np.array(range(0,self.n_obs))])
+					self.isready = False
+					self.n_obs = 0
+					if self.verbose is True:
+						s = 'old point ' + str(self.X) + ' to new point ' + str(self.Xp1)
+						print(s)
+					self.t = self.t + self.dt
+	#			else:
+	#				print('to do: store path when estimated')
+
+			elif self.objective == 'DA':
 				self.F_min()
 				Xp1,self.weight = self.sample()
 				self.X0 = Xp1[0:self.ndim]
 				self.Xp1 = Xp1[-self.ndim:]
-				self.isready = False
-				self.n_obs = 0
-				if self.verbose is True:
-					s = 'old point ' + str(self.X) + ' to new point ' + str(self.Xp1)
-					print(s)
-#			else:
-#				print('to do: store path when estimated')
-		self.t = self.t + self.dt
-			
+				self.intermediate_steps = np.array( [ Xp1[i*self.ndim:(i+1)*self.ndim] for i in range(1,Xp1.shape[0]-2) ] )
 
 
 	def integration(self,X,t):
@@ -357,99 +379,140 @@ class particle:
 			print('Reference particle!')
 		else:
 
-			Fint= 0 
-			for i in range(self.n_obs):
-				if i==0:
-					Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,self.X,X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
-				else:
-					Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
-#				s = 'Fint: ' + str(Fint)
-#				print(s)
-			Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
-			Fx = Fint+Fobs
-			s = 'F: ' + str(Fint) + '   ' + str(Fobs)
-#			print(s)
-#			if self.verbose is True:
-#				s = 'X: ' + str(np.around(X,decimals=3)) + ' F(X): ' + str(np.around(Fx,decimals=3)) + ' F1: ' + str(np.around(F1,decimals=3)) + ' F2: ' + str(np.around(F2,decimals=3)) + ' F3: ' + str(np.around(F3,decimals=3))
-#				print(s)
+			if self.objective == 'filter':
+				Fint= 0 
+				for i in range(self.n_obs):
+					if i==0:
+						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,self.X,X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
+					else:
+						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
 
-			return Fx
+				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
+
+				Fx = Fint+Fobs
+
+
+			elif self.objective == 'DA':
+				Fx = 0
+				Fint= 0
+				Fobs = 0
+				for i in range(self.n_obs.size):
+
+					Fint = Fint + P_int(self.fdyn,self.t[i],self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
+
+				for i in range(self.n_obs.size):
+					iobs = self.n_obs[i]
+					Fobs = Fobs + P_obs(self.h_obs,self.t,self.s,X[2*iobs*self.ndim:(2*iobs+1)*iself.ndim],self.Yp1[i])
+				Fx = Fx + Fint+Fobs
+
+		return Fx
 
 	def F_ersatz(self,lamda):
 		X = self.Xmin + lamda*np.dot(self.L.T , self.eps) / norme_vec(self.eps)
 		return np.abs(self.F(X) - self.Fmin - self.EE)
 
 	def F_min(self):
+
 		if self.ptype is True:
 			print('Reference particle!')
+
 		else:
-#			res = opt.fmin_bfgs(self.F,np.concatenate((self.X,self.X)),full_output=True)
-#			self.Xmin = res[0]
-#			self.Fmin = res[1]
-#			self.H = res[3] # inverse of the Hessian at the min point_init
-#			# usefull for the estimation of L, hence the weight
-#			if res[6]==2: #bfgs failed ?
-#				res = opt.minimize(self.F, self.Xmin, method = 'Nelder-Mead')
-#				self.Xmin = res.x
-#				self.Fmin = res.fun
-#				self.H = Hessian(self.F,self.Xmin, 0.01*np.abs(self.Xmin).min())
 
-#			self.L = np.linalg.cholesky(self.H)
-			X04min = np.zeros(2*self.ndim*self.n_obs)
-#			print(self.n_obs)
-			for i in range(self.n_obs):
-				if i == 0:
-					Xp05,Xp1 = self.integration(self.X,self.t-(self.n_obs-i-1)*self.dt)
-				else:
-					Xp05,Xp1 = self.integration(X04min[(2*(i-1))*self.ndim:(2*(i-1)+1)*self.ndim],self.t-(self.n_obs-i-1)*self.dt)
-				X04min[2*i*self.ndim:(2*i+1)*self.ndim] = Xp05
-				X04min[(2*i+1)*self.ndim:2*(i+1)*self.ndim] = Xp1
-#			print(X04min)
-			self.debug = X04min
+			if self.objective == 'filter':
+#construction of a good set of initial conditions
+				X04min = np.zeros(2*self.ndim*self.n_obs)
+				for i in range(self.n_obs):
+					if i == 0:
+						Xp05,Xp1 = self.integration(self.X,self.t-(self.n_obs-i-1)*self.dt)
+					else:
+						Xp05,Xp1 = self.integration(X04min[(2*(i-1))*self.ndim:(2*(i-1)+1)*self.ndim],self.t-(self.n_obs-i-1)*self.dt)
+					X04min[2*i*self.ndim:(2*i+1)*self.ndim] = Xp05
+					X04min[(2*i+1)*self.ndim:2*(i+1)*self.ndim] = Xp1
+				self.debug = X04min
 
-#			print('x0 et res')
-#			print(self.X)
-#			print(X0)
-			res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
-#			print(res.x)
-			if res.success is False:
-				print('minimisation failed')
-				print('try with ncg algorithm')
-				print(res.message)
-				self.cov_fact = 15
-				res = opt.minimize(self.F, X04min, method='Nelder-Mead',jac=None, hess=None)
+# minimisation
+				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+
+# if the mimimisation have failed
 				if res.success is False:
 					print('minimisation failed')
-					print('try with cg algorithm')
+					print('try with ncg algorithm')
 					print(res.message)
-					res = opt.minimize(self.F, X04min,jac=None, hess=None,method='CG')
+					self.cov_fact = 15
+					res = opt.minimize(self.F, X04min, method='Nelder-Mead',jac=None, hess=None)
 					if res.success is False:
-						print('minimisation failed again')
-						print('Point will just move with the flow')
+						print('minimisation failed')
+						print('try with cg algorithm')
 						print(res.message)
+						res = opt.minimize(self.F, X04min,jac=None, hess=None,method='CG')
+						if res.success is False:
+							print('minimisation failed again')
+							print('Point will just move with the flow')
+							print(res.message)
 
-#						Xp05,Xp1 = self.integration(self.X,self.t)
-						res.x =  X04min
-						res.fun = self.F(res.x)
-			else:
-				self.cov_fact = 1
+	#						Xp05,Xp1 = self.integration(self.X,self.t)
+							res.x =  X04min
+							res.fun = self.F(res.x)
+				else:
+					self.cov_fact = 1
 
-			self.res = res
-			self.Xmin = res.x
-			self.Fmin = res.fun
-			if res.success is True:
-				self.H = Hessian(self.F,self.Xmin, 0.1)
-#				print(np.linalg.cond(self.H))
-				try:
-					self.L = np.linalg.cholesky(np.linalg.inv(self.H))
-				except np.linalg.LinAlgError:
-					print('use of gmw')
-					self.L = gen_cholesky(np.linalg.inv(self.H))
-#				print(self.H)
-#				print(self.L)
-			else:
-				self.H = np.eye(2.0*self.ndim)
-				self.L = self.H
+				self.res = res
+				self.Xmin = res.x
+				self.Fmin = res.fun
+
+				if res.success is True:
+					self.H = Hessian(self.F,self.Xmin, 0.1)
+	#				print(np.linalg.cond(self.H))
+					try:
+						self.L = np.linalg.cholesky(np.linalg.inv(self.H))
+					except np.linalg.LinAlgError:
+# if the minimum is not that good, the (inverse of the) hessian might not be positive: we use a general cholesky decomposition:
+						print('use of gmw')
+						self.L = gen_cholesky(np.linalg.inv(self.H))
+				else: # the minimum is badly estimated anyway
+					self.H = np.eye(2.0*self.ndim)
+					self.L = self.H
+
+
+			elif self.objective == 'DA':
+				X04min = np.concatenate( ( self.X0.flatten(),self.intermediate_steps.flatten(),self.Xp1.flatten() ) )
+
+				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+
+				if res.success is False:
+					print('minimisation failed')
+					print('try with ncg algorithm')
+					print(res.message)
+					self.cov_fact = 15
+					res = opt.minimize(self.F, X04min, method='Nelder-Mead',jac=None, hess=None)
+					if res.success is False:
+						print('minimisation failed')
+						print('try with cg algorithm')
+						print(res.message)
+						res = opt.minimize(self.F, X04min,jac=None, hess=None,method='CG')
+						if res.success is False:
+							print('minimisation failed again')
+							print('Point will just move with the flow')
+							print(res.message)
+
+							res.x =  X04min
+							res.fun = self.F(res.x)
+				else:
+					self.cov_fact = 1
+
+				self.res = res
+				self.Xmin = res.x
+				self.Fmin = res.fun
+				if res.success is True:
+					self.H = Hessian(self.F,self.Xmin, 0.1)
+					try:
+						self.L = np.linalg.cholesky(np.linalg.inv(self.H))
+					except np.linalg.LinAlgError:
+						print('use of gmw')
+						self.L = gen_cholesky(np.linalg.inv(self.H))
+				else:
+					self.H = np.eye(2.0*self.ndim)
+					self.L = self.H
 
 
 	def sample(self):
@@ -534,12 +597,19 @@ class particle:
 			return weight
 
 	def set_weight(self,w):
+		self.old_weight = self.weight
 		self.weight = w
+
 	def get_weight(self):
 		if self.ptype is True:
 			print('Reference particle!')
 		else:
 			return self.weight
+	def get_old_weight(self):
+		if self.ptype is True:
+			print('Reference particle!')
+		else:
+			return self.old_weight
 
 	def get_last_position(self):
 		return self.X
@@ -554,20 +624,33 @@ class particle:
 	def set_current_position(self,Xp1):
 		self.Xp1 = Xp1
 
+	def get_intermediate_steps(self):
+		return self.intermediate_steps
+
 	def temporary_set_var(self,var):
 		self.cov_fact = var
 
 	def set_obs(self,Y):
 		self.Yp1 = Y
-		self.isready = True
+
+		if self.objective == 'filter':
+			self.isready = True
+
+	def set_obs(self,nobs):
+		self.n_obs = nobs
 
 	def get_obs(self):
 		return self.Yp1
 
+	def set_init(self,XO):
+		n = X0.size/self.ndim
+		self.X0 = X0[0:self.ndim]
+		self.intermediate_steps = np.array([X0[i*self.ndim:(i+1)*self.ndim] for i in np.array(range(1,n-1))])
+
 
 class density_particle:
 	def __init__(self,n_particle = 15, param_ref = particle_parameters(True),param_p = particle_parameters(False),isverbose = False):
-		self.obs_is_shared = True
+		self.new_data = True
 		self.isverbose = isverbose
 
 		self.n_particle = n_particle
@@ -583,10 +666,13 @@ class density_particle:
 		self.current_estimate_position = self.current_estimate_position/n_particle
 
 		self.X_ips = np.zeros((param_ref.get_dim(),n_particle))
+		self.intermediate_steps = []
+
 		for i_p in range(self.n_particle):
 			self.X_ips[:,i_p] = self.liste_p[i_p].get_current_position()
 
 		self.w = np.zeros(n_particle)
+		self.n_obs = []
 
 	def __len__(self):
 		return self.n_particle
@@ -597,12 +683,12 @@ class density_particle:
 		obs = self.p_ref.get_obs()
 		self.current_estimate_position[:] = 0
 
-		if self.obs_is_shared is True:
+		if self.new_data is True:
 			print('give obs')
 # next step
 		for i_p in range(0,self.n_particle):
 #			print(i_p)
-			if self.obs_is_shared is True:
+			if self.new_data is True:
 				self.liste_p[i_p].set_obs(obs)
 			self.liste_p[i_p].next_step()
 			self.X_ips[:,i_p] = self.liste_p[i_p].get_current_position()
@@ -627,8 +713,13 @@ class density_particle:
 # approximate position
 		for i_p in range(0,self.n_particle):
 			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
+			
 			if sumw ==0:
 				self.liste_p[i_p].temporary_set_var(15)
+
+		self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * self.w[0]
+		for i_p in range(1,self.n_particle):
+			self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * self.w[i_p]
 #		print(w)
 
 
@@ -649,11 +740,12 @@ class density_particle:
 #			s = "resampling: " + str(np.unique(perm)) + ' weights: ' + str(self.w)
 #			print(s)
 			for i_p in range(0,self.n_particle):
-				self.liste_p[i_p].set_weight(wrs[i_p])
+
+				self.liste_p[i_p].set_weight(wrs[i_p]/np.sum(wrs))
 				self.liste_p[i_p].set_current_position(Xrs[:,i_p])
 
-	def give_obs(self,boolean):
-		self.obs_is_shared = boolean
+	def new_data_provided(self,boolean):
+		self.new_data = boolean
 
 	def get_p(self,i):
 		return self.liste_p[i]
@@ -661,10 +753,25 @@ class density_particle:
 		return self.p_ref
 	def get_current_position(self):
 		return self.p_ref.get_current_position()
+
 	def get_estimate_position(self):
 		return self.current_estimate_position
 	def get_current_positions(self):
 	# position BEFORE ressampling
 		return self.X_ips
+
+	def get_estimate_intermediate_position(self):
+		return self.intermediate_steps
+
+	def get_estimate_intermediate_positions(self,i_p):
+		return self.liste_p[i_p].get_intermediate_steps()
+		
+	def set_obs_and_time(self,Y,n_obs):
+		if Y.size == n_obs.size:
+			for i in range(self.n_particle):
+				self.liste_p[i].set_time_obs(n_obs)
+				self.liste_p[i].set_obs(Y)
+		else:
+			print('Error: size between observables and times do not match')
 
 
