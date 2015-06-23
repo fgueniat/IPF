@@ -59,8 +59,8 @@ def plot1(figure,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 
 def multiplot1(figure,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 	a = (np.array(range(0,b[0].size)),)
-	for i in range(len(b)-1):
-		a = a + (np.array(range(0,b[0].size)),)
+	for i in range(1,len(b)):
+		a = a + (np.array(range(0,b[i].size)),)
 	fig = multiplot2(figure,a,b,mark_col,a_label,b_label)
 	return fig
 

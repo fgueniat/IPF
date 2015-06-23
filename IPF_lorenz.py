@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import dyn as d
+import dyn2 as d
 import plot_tools
 from plot_tools import closeall
 import time
@@ -19,18 +19,20 @@ if scenario == 'roessler':
 	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
 	ref_param.set_verbose(False)
 if scenario == 'burgers':
-	x = np.linspace(-1,1,20)
-	X_init = np.exp(- x**2)
-#	X_init = np.exp(- x**2) + 5*np.sinc(np.pi*x)
-	X_init = X_init - X_init.min()
-	X_init = X_init/X_init.max()
-#	X_init = 2*X_init-1
+	x = np.linspace(-1,1,30)
+#	X_init = np.exp(- x**2)
+##	X_init = np.exp(- x**2) + 5*np.sinc(np.pi*x)
+#	X_init = X_init - X_init.min()
+#	X_init = X_init/X_init.max()
+#	X_init = (2*X_init-1)/2
+	X_init = np.sinc(np.pi * x)
+	X_init = X_init/np.max(np.abs(X_init))
 
 	isverbose = False
 	dt = 0.01
 	t0 = 0
-	s_obs = np.sqrt(0.001)
-	g_int = np.sqrt(0.005)
+	s_obs = np.sqrt(0.01)
+	g_int = np.sqrt(0.01)
 	objective = 'filter'
 
 	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
@@ -43,7 +45,7 @@ if scenario == 'burgers':
 ndim = ref_param.get_dim()
 
 
-n_t = 100
+n_t = 15
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
@@ -106,7 +108,7 @@ for i_t in range(1,n_t):
 
 
 
-isplot = False
+isplot = True
 
 
 if isplot is True:
@@ -130,11 +132,11 @@ if isplot is True:
 		x = (np.array(ind[0]),range(0,y[1].size))
 		plot_tools.multiplot2(False,x,y,['or','.k'])
 	if scenario == 'burgers':
-		for it in range(i_t):
-		x = (traj[:,it],rec_traj[:,it],obs[:,it])
-		plot_tools.multiplot1(False,x,['b','k','r'])
-		plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
-		closeall()
+		for it in range(i_t+1):
+			x = (traj[:,it],rec_traj[:,it],obs[:,it])
+			plot_tools.multiplot1(False,x,['b','k','r'])
+			plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
+			closeall()
 
 
 issave = False

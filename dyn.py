@@ -23,9 +23,11 @@ def h_lorenz(X,t):
 	return hX
 
 def f_burgers(u,t):
-	# burgers with no diffusion. Upwind scheme
-	
+	# burgers. Upwind scheme + central diff
+	nu = 0.01
+
 	dx = 1./u.size
+# advection
 	up = np.copy(u)
 	up[up<0.] = 0.
 	um = np.copy(u)
@@ -42,11 +44,23 @@ def f_burgers(u,t):
 	dudtm[0] = +3.*u[0] - 4.*u[-1] + u[-2]
 
 	dudt = -u*(up*dudtm + um*dudtp)/dx
+
+	dudt[1:-1] = dudt[1:-1] + nu * (u[2:] - 2 * u[1:-1] + u[:-2]) / dx**2
+	dudt[0] = dudt[0] + nu * (u[1] - 2 * u[0] + u[-1]) / dx**2
+	dudt[-1] = dudt[-1] + nu * (u[0] - 2 * u[-1] + u[-2]) / dx**2
+
 	return dudt
 
 def h_burgers(U,t):
 
-	hU = U
+	n = np.int_(np.linspace(0,U.size-1,5))
+#	hU = U
+#	print(np.sum(U))
+#	print(np.max(U))
+#	print(np.min(U))
+#	print(U[n])
+	
+	hU = np.concatenate((np.array([ np.sum(U),np.max(U),np.min(U)]),U[n] ))
 	return hU
 
 
@@ -246,8 +260,8 @@ class particle_parameters:
 		if ptype:
 			self.X = X_init
 		else:
-			self.X = X_init + np.random.uniform(0,self.s,X_init.shape)
-			self.X[:] = 0
+			self.X = X_init + np.random.uniform(0,10*self.s,X_init.shape)
+#			self.X[:] = 0
 
 		self.Y = self.h_obs(self.X,self.t)
 
@@ -412,7 +426,7 @@ class particle:
 
 		return Xp05,Xp1
 
-	
+
 	def F(self,X):
 		""" Xp05 = X[0:self.ndim]
 		Xp1 = X[self.ndim:]
@@ -432,10 +446,7 @@ class particle:
 #						print(X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
 					else:
 						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
-#				print(self.X)
-#				print(X)
-#				print(self.Yp1)
-#				print(Y)
+
 				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
 
 				Fx = Fint+Fobs
@@ -488,7 +499,7 @@ class particle:
 #				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
 #				print(X04min)
 				res = opt.minimize(self.F, X04min, method='BFGS')
-				s = 'F = ' + str(self.F(res.x)) + ' x = '+ str(res.x)
+				s = 'F = ' + str(self.F(res.x)) 
 				print(s)
 
 				
@@ -523,11 +534,17 @@ class particle:
 					self.H = Hessian(self.F,self.Xmin, 0.1)
 	#				print(np.linalg.cond(self.H))
 					try:
-						self.L = np.linalg.cholesky(np.linalg.inv(self.H))
+						self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
 					except np.linalg.LinAlgError:
 # if the minimum is not that good, the (inverse of the) hessian might not be positive: we use a general cholesky decomposition:
 						print('use of gmw')
-						self.L = gen_cholesky(np.linalg.inv(self.H))
+						try:
+							self.L = gen_cholesky(np.linalg.pinv(self.H))
+						except:
+							print('Singular matrix')
+							self.H = np.eye(2.0*self.ndim)
+							self.L = self.H
+
 				else: # the minimum is badly estimated anyway
 					self.H = np.eye(2.0*self.ndim)
 					self.L = self.H
@@ -565,10 +582,10 @@ class particle:
 				if res.success is True:
 					self.H = Hessian(self.F,self.Xmin, 0.1)
 					try:
-						self.L = np.linalg.cholesky(np.linalg.inv(self.H))
+						self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
 					except np.linalg.LinAlgError:
 						print('use of gmw')
-						self.L = gen_cholesky(np.linalg.inv(self.H))
+						self.L = gen_cholesky(np.linalg.pinv(self.H))
 				else:
 					self.H = np.eye(2.0*self.ndim)
 					self.L = self.H
@@ -653,6 +670,8 @@ class particle:
 					print('iszeros')
 					print(J)
 					print(self.Fmin)
+			if np.isnan(weight):
+				weight = 0
 			return weight
 
 	def set_weight(self,w):
@@ -775,19 +794,26 @@ class density_particle:
 			if sumw ==0:
 				self.liste_p[i_p].temporary_set_var(15)
 
-		self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * self.w[0]
+		try:
+			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * self.w[0]
+		except:
+			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * 0.0
 		for i_p in range(1,self.n_particle):
-			self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * self.w[i_p]
+			try:
+				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * self.w[i_p]
+			except:
+				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * 0.0
+			
 #		print(w)
 
 
 #ressample	
 		doressample = False
-		if np.random.uniform()<0.005: # force ressample from time to time
+		if np.random.uniform()<0.05: # force ressample from time to time
 			doressample = True
 		if self.w.min() < 1e-8: # one particle is neglectible
 			doressample = True
-		if self.w.max() > 0.3: # one particle is too important
+		if self.w.max() > 5.0/self.n_particle: # one particle is too important
 			doressample = True
 
 		if doressample is True:
