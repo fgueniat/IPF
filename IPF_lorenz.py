@@ -2,29 +2,58 @@ import numpy as np
 import matplotlib.pyplot as plt
 import dyn as d
 import plot_tools
-
+from plot_tools import closeall
 import time
-point = np.array([ -4.4090617 ,   0.94099541,  31.65011104])
 
 
-ref_param = d.particle_parameters(True)
-n_particle = 10
-ps_param = [d.particle_parameters(False) for i in range(n_particle)]
-ref_param.set_verbose(False)
+scenario = 'burgers'
+
+if scenario == 'lorenz':
+	ref_param = d.particle_parameters(True)
+	n_particle = 10
+	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
+	ref_param.set_verbose(False)
+if scenario == 'roessler':
+	ref_param = d.particle_parameters(True)
+	n_particle = 10
+	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
+	ref_param.set_verbose(False)
+if scenario == 'burgers':
+	x = np.linspace(-1,1,20)
+	X_init = np.exp(- x**2)
+#	X_init = np.exp(- x**2) + 5*np.sinc(np.pi*x)
+	X_init = X_init - X_init.min()
+	X_init = X_init/X_init.max()
+#	X_init = 2*X_init-1
+
+	isverbose = False
+	dt = 0.01
+	t0 = 0
+	s_obs = np.sqrt(0.001)
+	g_int = np.sqrt(0.005)
+	objective = 'filter'
+
+	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
+
+	n_particle = 10
+	ps_param = [d.particle_parameters(False,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
+	ref_param.set_verbose(False)
+
+
 ndim = ref_param.get_dim()
 
 
-n_t = 1000
+n_t = 100
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
-obs = np.zeros((n_t))
+obs = np.zeros((ref_param.get_dim_obs(),n_t))
 
 isverbose = False
 
 lpath = [np.zeros((ndim,n_t)) for i in range(n_particle)]
 
-density = d.density_particle(n_particle, ref_param,ps_param)
+density = d.density_particle(n_particle, ref_param, ps_param)
 for i_p in range(0,n_particle):
 	lpath[i_p][:,0] = density.get_p(i_p).get_current_position()
 
@@ -34,7 +63,7 @@ traj[:,0] = density.get_current_position()
 
 obs_strat = np.zeros(n_t)
 for i_t in range(1,n_t):
-	if np.mod(i_t,5)==0:
+	if np.mod(i_t,1)==0:
 		obs_strat[i_t] = 1
 compteur_obs = 0
 for i_t in range(1,n_t):
@@ -50,7 +79,7 @@ for i_t in range(1,n_t):
 
 # for verifications and plot
 	traj[:,i_t] = density.get_current_position()
-	obs[i_t] = density.p_ref.get_obs()
+	obs[:,i_t] = density.p_ref.get_obs()
 	if obs_strat[i_t]==1:
 		rec_traj[:,i_t] = density.get_estimate_position()
 
@@ -76,33 +105,36 @@ for i_t in range(1,n_t):
 		compteur_obs = 0
 
 
-x = (traj[0,:-10],rec_traj[0,:-10])
-y = (traj[1,:-10],rec_traj[1,:-10])
-z = (traj[2,:-10],rec_traj[2,:-10])
-plot_tools.multiplot3(x,y,z,['-r','--k'])
 
-for i_p in range(n_particle):
-	x = x + (lpath[i_p][0,:-10],)
-	y = y + (lpath[i_p][1,:-10],)
-	z = z + (lpath[i_p][2,:-10],)
-
-plot_tools.multiplot3(x,y,z,['-r','--k'])
+isplot = False
 
 
-plot_tools.multiplot1(((traj[0,:-10],rec_traj[0,:-10])),['-r','--k'])
-
-plot_tools.multiplot1(x,['-r','-k'])
-
-ind = np.where(obs_strat[:-10]==1)
-y = (traj[0,ind[0]],traj[0,:-10])
-x = (ind[0],np.array(range(0,y[1].size)))
-
-plot_tools.multiplot2(x,y,['or','.k'])
-
-y = (obs[ind[0]],obs[:-10])
-x = (np.array(ind[0]),range(0,y[1].size))
-
-plot_tools.multiplot2(x,y,['or','.k'])
+if isplot is True:
+	if scenario == 'lorenz':
+		x = (traj[0,:-10],rec_traj[0,:-10])
+		y = (traj[1,:-10],rec_traj[1,:-10])
+		z = (traj[2,:-10],rec_traj[2,:-10])
+		plot_tools.multiplot3(False,x,y,z,['-r','--k'])
+		for i_p in range(n_particle):
+			x = x + (lpath[i_p][0,:-10],)
+			y = y + (lpath[i_p][1,:-10],)
+			z = z + (lpath[i_p][2,:-10],)
+		plot_tools.multiplot3(False,x,y,z,['-r','--k'])
+		plot_tools.multiplot1(False,((traj[0,:-10],rec_traj[0,:-10])),['-r','--k'])
+		plot_tools.multiplot1(False,x,['-r','-k'])
+		ind = np.where(obs_strat[:-10]==1)
+		y = (traj[0,ind[0]],traj[0,:-10])
+		x = (ind[0],np.array(range(0,y[1].size)))
+		plot_tools.multiplot2(False,x,y,['or','.k'])
+		y = (obs[0,ind[0]],obs[0,:-10])
+		x = (np.array(ind[0]),range(0,y[1].size))
+		plot_tools.multiplot2(False,x,y,['or','.k'])
+	if scenario == 'burgers':
+		for it in range(i_t):
+		x = (traj[:,it],rec_traj[:,it],obs[:,it])
+		plot_tools.multiplot1(False,x,['b','k','r'])
+		plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
+		closeall()
 
 
 issave = False

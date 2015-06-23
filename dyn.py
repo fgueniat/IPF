@@ -22,6 +22,34 @@ def h_lorenz(X,t):
 #	hX = X
 	return hX
 
+def f_burgers(u,t):
+	# burgers with no diffusion. Upwind scheme
+	
+	dx = 1./u.size
+	up = np.copy(u)
+	up[up<0.] = 0.
+	um = np.copy(u)
+	um[um>0.] = 0.
+
+	dudtp = np.zeros(u.size)
+	dudtp[0:-2] = -3.*u[0:-2] + 4.*u[1:-1] - u[2:]
+	dudtp[-2] = -3.*u[-2] + 4.*u[-1] - u[0]
+	dudtp[-1] = -3.*u[-1] + 4.*u[0] - u[1]
+
+	dudtm = np.zeros(u.size)
+	dudtm[2:] = +3.*u[2:] - 4.*u[1:-1] + u[:-2]
+	dudtm[1] = +3.*u[1] - 4.*u[0] + u[-1]
+	dudtm[0] = +3.*u[0] - 4.*u[-1] + u[-2]
+
+	dudt = -u*(up*dudtm + um*dudtp)/dx
+	return dudt
+
+def h_burgers(U,t):
+
+	hU = U
+	return hU
+
+
 
 def mrand(mean,cov):
 	if mean.size == 1:
@@ -52,6 +80,18 @@ def P_int(f,t,dt,g,X,Xp05,Xp1):
 	P2 = norme_vec( Xp1 - X - dt * ( fX + f(Xp05,t) )/2.0 )**2.0 / (2.0 * dt * g * g)
 
 	return P1+P2
+
+
+def P_int_min(f,t,dt,g,X,Xp1):
+# proba that (Xp05,Xp1) corresponds to transport of X by f, after a time dt.
+#Klauder perterson scheme
+
+	fX = f(X,t)
+	Xs = X + dt * fX
+	
+	P = norme_vec( Xp1 - X - dt * ( fX + f(Xs,t) )/2.0 )**2.0 / (2.0 * dt * g * g)
+
+	return P
 
 def P_obs(h,t,s,X,y):
 # proba that the measure of X corresponds to observation y
@@ -191,24 +231,25 @@ def norme_vec(a):
 
 class particle_parameters:
 
-	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),sampling = 1,verbose = False,precond = np.array([15.0,15.0,25.0]), fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
+	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),verbose = False, fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
 		self.ptype = ptype # true if real state, false is particle
 		self.objective = objective # DA for data assimilation, filter for filtering
 		self.fdyn = fdyn # dynamical function
-		self.h_obs = h_lorenz # observable function
+		self.h_obs = h_obs # observable function
 		self.dt = dt
 		self.t = t0
-		self.sampling = sampling # observations every sampling time step
 
 		self.s = s_obs
 		self.g = g_int
-		self.precond = np.diag(np.ones(precond.size)/precond)
 		self.verbose = verbose
 		
 		if ptype:
 			self.X = X_init
 		else:
-			self.X = X_init + np.random.uniform(0,1,X_init.shape)
+			self.X = X_init + np.random.uniform(0,self.s,X_init.shape)
+			self.X[:] = 0
+
+		self.Y = self.h_obs(self.X,self.t)
 
 	def __len__(self):
 		return 1
@@ -253,10 +294,10 @@ class particle_parameters:
 	def get_position(self):
 		return self.X	
 
-	def set_precond(self,cond):
-		self.precond = cond
-	def get_precond(self):
-		return self.precond
+#	def set_precond(self,cond):
+#		self.precond = cond
+#	def get_precond(self):
+#		return self.precond
 
 	def set_verbose(self,v):
 		self.verbose = v
@@ -265,6 +306,8 @@ class particle_parameters:
 
 	def get_dim(self):
 		return self.X.size
+	def get_dim_obs(self):
+		return self.Y.size
 
 	def get_objective(self):
 		return self.objective
@@ -286,11 +329,11 @@ class particle:
 		self.h_obs = param.get_h()
 
 		self.X = param.get_position()
-		self.Xp1 = self.X
-		self.X0 = self.X # for assimilation
-		self.Xp05 = self.X
+		self.Xp1 = np.copy(self.X)
+		self.X0 = np.copy(self.X) # for assimilation
+		self.Xp05 = np.copy(self.X)
 
-		self.precond = param.get_precond()
+#		self.precond = param.get_precond()
 
 		self.verbose = param.get_verbose()
 
@@ -300,7 +343,7 @@ class particle:
 		self.dt = param.get_dt()
 
 		if self.ptype is True:
-			self.path = self.X
+			self.path = np.copy(self.X)
 			self.Yp1 = self.compute_obs(self.Xp1,self.t)
 		else:
 			self.old_weight = 1.0
@@ -324,7 +367,7 @@ class particle:
 
 	def next_step(self):
 
-		self.X = self.Xp1
+		self.X = np.copy(self.Xp1)
 		self.n_obs = self.n_obs + 1
 
 		if self.ptype is True:
@@ -337,8 +380,8 @@ class particle:
 				if self.isready is True:
 					self.F_min()
 					Xp1,self.weight = self.sample()
-					self.X0 = Xp1[0:self.ndim]
-					self.Xp1 = Xp1[-self.ndim:]
+					self.X0 = np.copy(Xp1[0:self.ndim])
+					self.Xp1 = np.copy(Xp1[-self.ndim:])
 					if self.n_obs>1:
 						self.intermediate_steps = np.array([Xp1[2*i*self.ndim:(2*i+1)*self.ndim] for i in np.array(range(0,self.n_obs))])
 					self.isready = False
@@ -353,8 +396,8 @@ class particle:
 			elif self.objective == 'DA':
 				self.F_min()
 				Xp1,self.weight = self.sample()
-				self.X0 = Xp1[0:self.ndim]
-				self.Xp1 = Xp1[-self.ndim:]
+				self.X0 = np.copy(Xp1[0:self.ndim])
+				self.Xp1 = np.copy(Xp1[-self.ndim:])
 				self.intermediate_steps = np.array( [ Xp1[i*self.ndim:(i+1)*self.ndim] for i in range(1,Xp1.shape[0]-2) ] )
 
 
@@ -383,14 +426,25 @@ class particle:
 				Fint= 0 
 				for i in range(self.n_obs):
 					if i==0:
-						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,self.X,X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
+#						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,self.X,X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
+						Fint = Fint + P_int_min(self.fdyn,self.t,self.dt,self.g,self.X,X[(i+0)*self.ndim:(i+1)*self.ndim])
+#						print(X[2*i*self.ndim:(2*i+1)*self.ndim])
+#						print(X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
 					else:
 						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
-
+#				print(self.X)
+#				print(X)
+#				print(self.Yp1)
+#				print(Y)
 				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
 
 				Fx = Fint+Fobs
-
+#				s = 'X = ' + str(X) + ' and registered X is ' + str(self.X)
+#				print(s)
+#				s = 'F(x) = ' + str(Fx)
+#				print(s)
+#				s = 'F = ' + str(Fint) + '   '+ str(Fobs)
+#				print(s)
 
 			elif self.objective == 'DA':
 				Fx = 0
@@ -404,7 +458,7 @@ class particle:
 					iobs = self.n_obs[i]
 					Fobs = Fobs + P_obs(self.h_obs,self.t,self.s,X[2*iobs*self.ndim:(2*iobs+1)*iself.ndim],self.Yp1[i])
 				Fx = Fx + Fint+Fobs
-
+#		print(Fx)
 		return Fx
 
 	def F_ersatz(self,lamda):
@@ -431,8 +485,13 @@ class particle:
 				self.debug = X04min
 
 # minimisation
-				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+#				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+#				print(X04min)
+				res = opt.minimize(self.F, X04min, method='BFGS')
+				s = 'F = ' + str(self.F(res.x)) + ' x = '+ str(res.x)
+				print(s)
 
+				
 # if the mimimisation have failed
 				if res.success is False:
 					print('minimisation failed')
@@ -632,11 +691,10 @@ class particle:
 
 	def set_obs(self,Y):
 		self.Yp1 = Y
-
 		if self.objective == 'filter':
 			self.isready = True
 
-	def set_obs(self,nobs):
+	def set_obs_time(self,nobs):
 		self.n_obs = nobs
 
 	def get_obs(self):
