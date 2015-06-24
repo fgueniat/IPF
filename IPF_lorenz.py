@@ -27,16 +27,13 @@ if scenario == 'burgers':
 #	X_init = (2*X_init-1)/2
 	X_init = np.sinc(np.pi * x)
 	X_init = X_init/np.max(np.abs(X_init))
-
 	isverbose = False
 	dt = 0.01
 	t0 = 0
 	s_obs = np.sqrt(0.01)
 	g_int = np.sqrt(0.01)
 	objective = 'filter'
-
 	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
-
 	n_particle = 10
 	ps_param = [d.particle_parameters(False,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
 	ref_param.set_verbose(False)
@@ -58,7 +55,6 @@ lpath = [np.zeros((ndim,n_t)) for i in range(n_particle)]
 density = d.density_particle(n_particle, ref_param, ps_param)
 for i_p in range(0,n_particle):
 	lpath[i_p][:,0] = density.get_p(i_p).get_current_position()
-
 	rec_traj[:,0] = rec_traj[:,0] + lpath[i_p][:,0]
 rec_traj[:,0] = rec_traj[:,0]/n_particle
 traj[:,0] = density.get_current_position()
@@ -68,6 +64,8 @@ for i_t in range(1,n_t):
 	if np.mod(i_t,1)==0:
 		obs_strat[i_t] = 1
 compteur_obs = 0
+
+
 for i_t in range(1,n_t):
 	print(i_t)
 	

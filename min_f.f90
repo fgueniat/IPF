@@ -33,18 +33,46 @@ c !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 	
 END FUNCTION F_proba
 
+Function NORM2(X)
+C already present in fortran 2008
+	NORM2 = DOT_PRODUCT(X,X) ** 0.5
+end FUNCTION NORM2
 
 
-FUNCTION F_1d(XX,t)
-c find a sample using argmin F_proba and min(F_proba)
+FUNCTION F_1D(l,t)
+c Used for identifying sample using argmin F_proba and min(F_proba)
+	COMMON Xmin
+	COMMON Eps
+	COMMON L
+
+	F_1D = F_proba( Xmin + l * TRANSPOSE(L) * Eps / NORM2(Eps),t )
+
+END FUNCTION F_1D
+
+FUNCTION Weight(X,l,t)
+c find the weight associated with a sample
 	COMMON Xn
 	COMMON minF
 	COMMON Xmin
 	COMMON Eps
+	COMMON w
+	COMMON L
+	COMMON n
+	REAL :: rho = NORM2(Eps)
+	REAL :: dl = 0.01
+	REAL :: dldp
+	real :: det
 
-	F_1d = abs(F_proba(XX,t) - minF - 0.5* NORM2(Eps))
+	det = GETDET(L,n)
 
-END FUNCTION F_1d
+	Fp = F_1D( l+dl,t )
+	Fm = F_1D( l,t )
+	dldp = dl / ( 2.0 * (Fp - Fm) )
+
+	J = 2.0 * ABS(det) * (rho ** (1-n) ) * ABS( (l ** (n-1)) * dldp )
+
+	Weight = w*EXP(-minF)*J
+END FUNCTION F_1D
 
 
 SUBROUTINE Ressample(X,w,Xrs,wrs):
@@ -63,7 +91,7 @@ c	REAL, DIMENSION(n, n_particle) :: Xrs
 
 	wrs(:) = 1.0/n_particle
 	cdf(:) = 0.0d0
-	u0 = random_number()/n_particle
+	u0 = RANDOM_NUMBER()/n_particle
 	u(:) = 0.0d0
 	perm(:) = 0.0d0
 
@@ -113,8 +141,75 @@ c	REAL, DIMENSION(n) :: H_obs
 	REAL, DIMENSION(3) :: H_obs
 	REAL, DIMENSION(3) :: y_scalar
 
-	call random_number(y_scalar)
+	call RANDOM_NUMBER(y_scalar)
 	H_obs = x + y_scalar
 
 END FUNCTION H_obs
 
+
+
+
+REAL*8 FUNCTION GETDET(A, N)
+C A function written in FORTRAN77 to calculate determinant of a square matrix
+
+C Passed parameters:
+C A = the matrix
+C N = dimension of the square matrix
+       
+C A modification of a code originally written by Ashwith J. Rego, available from http://www.dreamincode.net/code/snippet1273.htm
+C Modified by Syeilendra Pramuditya, available from http://wp.me/p61TQ-zb
+C Last modified on January 13, 2011 
+      IMPLICIT REAL*8 (A-H,O-Z)
+      REAL*8 ELEM(N,N),A(N,N)
+      REAL*8 M, TEMP
+      INTEGER I, J, K, L
+      LOGICAL DETEXISTS
+
+      DO I=1,N
+      DO J=1,N
+      ELEM(I,J)=A(I,J)
+      END DO
+      END DO
+        
+      DETEXISTS = .TRUE.
+      L = 1
+      !CONVERT TO UPPER TRIANGULAR FORM
+      DO K = 1, N-1
+	  IF (DABS(ELEM(K,K)).LE.1.0D-20) THEN
+	  DETEXISTS = .FALSE.
+	  DO I = K+1, N
+	  IF (ELEM(I,K).NE.0.0) THEN
+      
+	  DO J = 1, N
+	  TEMP = ELEM(I,J)
+	  ELEM(I,J)= ELEM(K,J)
+	  ELEM(K,J) = TEMP
+	  END DO
+      
+	  DETEXISTS = .TRUE.
+	  L=-L
+	  EXIT
+      
+	  END IF
+      
+	  END DO
+	  IF (DETEXISTS .EQV. .FALSE.) THEN
+	  GETDET = 0
+	  RETURN
+	  END IF
+      END IF
+      DO J = K+1, N
+	  M = ELEM(J,K)/ELEM(K,K)
+	  DO I = K+1, N
+	  ELEM(J,I) = ELEM(J,I) - M*ELEM(K,I)
+	  END DO
+	  END DO
+      END DO
+	
+      !CALCULATE DETERMINANT BY FINDING PRODUCT OF DIAGONAL ELEMENTS
+      GETDET = L
+      DO I = 1, N
+	  GETDET = GETDET * ELEM(I,I)
+      END DO
+	
+      END        
