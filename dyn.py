@@ -254,7 +254,7 @@ class particle_parameters:
 		if ptype:
 			self.X = X_init
 		else:
-			self.X = X_init + np.random.uniform(0,10*self.s,X_init.shape)
+			self.X = X_init + np.random.normal(0,s_obs,X_init.size)
 #			self.X[:] = 0
 
 		self.Y = self.h_obs(self.X,self.t)
@@ -383,20 +383,27 @@ class particle:
 		else:
 			if self.objective == 'filter':
 				if self.isready is True:
+#					self.F_min()
+#					Xp1,self.weight = self.sample()
+#					self.X0 = np.copy(Xp1[0:self.ndim])
+#					self.Xp1 = np.copy(Xp1[-self.ndim:])
+#					if self.n_obs>1:
+#						self.intermediate_steps = np.array([Xp1[2*i*self.ndim:(2*i+1)*self.ndim] for i in np.array(range(0,self.n_obs))])
+#					self.isready = False
+#					self.n_obs = 0
+#					if self.verbose is True:
+#						s = 'old point ' + str(self.X) + ' to new point ' + str(self.Xp1)
+#						print(s)
+#					self.t = self.t + self.dt
+
 					self.F_min()
 					Xp1,self.weight = self.sample()
-					self.X0 = np.copy(Xp1[0:self.ndim])
 					self.Xp1 = np.copy(Xp1[-self.ndim:])
-					if self.n_obs>1:
-						self.intermediate_steps = np.array([Xp1[2*i*self.ndim:(2*i+1)*self.ndim] for i in np.array(range(0,self.n_obs))])
 					self.isready = False
 					self.n_obs = 0
-					if self.verbose is True:
-						s = 'old point ' + str(self.X) + ' to new point ' + str(self.Xp1)
-						print(s)
 					self.t = self.t + self.dt
-	#			else:
-	#				print('to do: store path when estimated')
+				else:
+					print('to do: store path when estimated')
 
 			elif self.objective == 'DA':
 				self.F_min()
@@ -416,11 +423,12 @@ class particle:
 
 		return Xp05,Xp1
 
-	def F(self,X):
+	def F2(self,X):
 		""" Xp05 = X[0:self.ndim]
 		Xp1 = X[self.ndim:]
 		=> the Klauder perterson scheme is used, and is a two-steps scheme
 		"""
+		'''
 		if self.ptype is True:
 			print('Reference particle!')
 		else:
@@ -434,7 +442,7 @@ class particle:
 #						print(X[2*i*self.ndim:(2*i+1)*self.ndim])
 #						print(X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
 					else:
-						Fint = Fint + P_int(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
+						Fint = Fint + P_int_min(self.fdyn,self.t,self.dt,self.g,X[(2*i-1)*self.ndim:2*(i)*self.ndim],X[2*i*self.ndim:(2*i+1)*self.ndim],X[(2*i+1)*self.ndim:2*(i+1)*self.ndim])
 
 				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
 
@@ -460,13 +468,37 @@ class particle:
 				Fx = Fx + Fint+Fobs
 #		print(Fx)
 		return Fx
+		'''
+		pass
+
+	def F(self,X):
+		""" Xp05 = X[0:self.ndim]
+		Xp1 = X[self.ndim:]
+		=> the Klauder perterson scheme is used, and is a two-steps scheme
+		"""
+		if self.ptype is True:
+			print('Reference particle!')
+		else:
+
+			if self.objective == 'filter':
+				Fint= P_int_min(self.fdyn,self.t,self.dt,self.g,self.X[-self.ndim:],X[-self.ndim:])
+
+				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
+
+				Fx = Fint+Fobs
+
+		return Fx
+
+
+
+
 
 	def F_ersatz(self,lamda):
 		X = self.Xmin + lamda*np.dot(self.L.T , self.eps) / norme_vec(self.eps)
 		return np.abs(self.F(X) - self.Fmin - self.EE)
 
-	def F_min(self):
-
+	def F_min2(self):
+		'''
 		if self.ptype is True:
 			print('Reference particle!')
 
@@ -578,8 +610,132 @@ class particle:
 				else:
 					self.H = np.eye(2.0*self.ndim)
 					self.L = self.H
+		'''
+		pass
+
+	def F_min(self):
+
+		if self.ptype is True:
+			print('Reference particle!')
+
+		else:
+
+			if self.objective == 'filter':
+#construction of a good set of initial conditions
+				X04min = np.zeros(2*self.ndim*self.n_obs)
+				Xp05,Xp1 = self.integration(self.X,self.t)
+				X04min = np.copy(Xp1)
+				self.debug = X04min
+
+# minimisation
+#				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+#				print(X04min)
+				res = opt.minimize(self.F, X04min, method='BFGS')
+				s = 'F = ' + str(self.F(res.x)) 
+#				print(s)
+
+
+
+				self.res = res
+				self.Xmin = res.x
+				self.Fmin = res.fun
+
+
+				self.H = Hessian(self.F,self.Xmin, 0.1)
+#				print(np.linalg.cond(self.H))
+				try:
+					self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
+				except np.linalg.LinAlgError:
+# if the minimum is not that good, the (inverse of the) hessian might not be positive: we use a general cholesky decomposition:
+					print('use of gmw')
+					try:
+						self.L = gen_cholesky(np.linalg.pinv(self.H))
+					except:
+						print('Singular matrix')
+						self.H = np.eye(self.Xmin.size)
+						self.L = self.H
+
+
+
+			elif self.objective == 'DA':
+				X04min = np.concatenate( ( self.X0.flatten(),self.intermediate_steps.flatten(),self.Xp1.flatten() ) )
+
+				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
+
+				if res.success is False:
+					print('minimisation failed')
+					print('try with ncg algorithm')
+					print(res.message)
+					self.cov_fact = 15
+					res = opt.minimize(self.F, X04min, method='Nelder-Mead',jac=None, hess=None)
+					if res.success is False:
+						print('minimisation failed')
+						print('try with cg algorithm')
+						print(res.message)
+						res = opt.minimize(self.F, X04min,jac=None, hess=None,method='CG')
+						if res.success is False:
+							print('minimisation failed again')
+							print('Point will just move with the flow')
+							print(res.message)
+
+							res.x =  X04min
+							res.fun = self.F(res.x)
+				else:
+					self.cov_fact = 1
+
+				self.res = res
+				self.Xmin = res.x
+				self.Fmin = res.fun
+				if res.success is True:
+					self.H = Hessian(self.F,self.Xmin, 0.1)
+					try:
+						self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
+					except np.linalg.LinAlgError:
+						print('use of gmw')
+						self.L = gen_cholesky(np.linalg.pinv(self.H))
+				else:
+					self.H = np.eye(2.0*self.ndim)
+					self.L = self.H
+
 
 	def sample(self):
+		if self.ptype is True:
+			print('Reference particle!')
+		else:
+			mean = np.zeros(self.Xmin.size)
+
+
+			weightisok = False
+			nit = 0
+			cov = self.cov_fact*np.eye(self.Xmin.size) 
+			
+			while weightisok is False:
+				
+				self.eps = mrand(mean,cov)
+				self.EE = 0.5 * norme_vec(self.eps)**2.0
+				lamda = self.solveEqAlgebraic()
+				Xp1 = self.Xmin + lamda*np.dot(self.L.T , self.eps) / norme_vec(self.eps)
+				weight = self.Id_Weight(Xp1,lamda)
+				nit = nit + 1
+				if nit>2:
+					weightisok = True
+				if weight > 0:
+					weightisok = True
+#			self.cov_fact = 15.0
+
+#			Xp1 = Xp1[self.ndim:]
+#			Xp05 = Xp1[0:self.ndim]
+
+			if self.verbose is True:
+				s = 'Algebraic solution lambda: ' + str(lamda)
+				print(s)
+				s = 'Xmin: ' + str(self.Xmin[self.ndim:]) + ' to sample: ' + str(Xp1)
+				print(s)
+
+			return Xp1,weight
+
+	def sample2(self):
+		'''
 		if self.ptype is True:
 			print('Reference particle!')
 		else:
@@ -619,6 +775,8 @@ class particle:
 				print(s)
 
 			return Xp1,weight
+		'''
+		pass
 
 	def solveEqAlgebraic(self):
 		if self.ptype is True:

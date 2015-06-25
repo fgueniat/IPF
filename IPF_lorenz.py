@@ -6,12 +6,20 @@ from plot_tools import closeall
 import time
 
 
-scenario = 'lorenz'
+scenario = 'burgers'
 
 if scenario == 'lorenz':
-	ref_param = d.particle_parameters(True)
+	X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104])
+	isverbose = False
+	dt = 0.01
+	t0 = 0
+	s_obs = np.sqrt(1.0)
+	g_int = np.sqrt(1.0)
+	objective = 'filter'
+	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective)
 	n_particle = 10
-	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
+	ps_param = [d.particle_parameters(False,X_init,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
+
 	ref_param.set_verbose(False)
 if scenario == 'roessler':
 	ref_param = d.particle_parameters(True)
@@ -42,7 +50,7 @@ if scenario == 'burgers':
 ndim = ref_param.get_dim()
 
 
-n_t = 500
+n_t = 10
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
