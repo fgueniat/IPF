@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import dyn2 as d
+import dyn as d
 import plot_tools
 from plot_tools import closeall
 import time
 
 
-scenario = 'burgers'
+scenario = 'lorenz'
 
 if scenario == 'lorenz':
 	ref_param = d.particle_parameters(True)
@@ -42,7 +42,7 @@ if scenario == 'burgers':
 ndim = ref_param.get_dim()
 
 
-n_t = 15
+n_t = 500
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))

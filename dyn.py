@@ -63,8 +63,6 @@ def h_burgers(U,t):
 	hU = np.concatenate((np.array([ np.sum(U),np.max(U),np.min(U)]),U[n] ))
 	return hU
 
-
-
 def mrand(mean,cov):
 	if mean.size == 1:
 		monrand = np.random.uniform(mean,cov)
@@ -95,7 +93,6 @@ def P_int(f,t,dt,g,X,Xp05,Xp1):
 
 	return P1+P2
 
-
 def P_int_min(f,t,dt,g,X,Xp1):
 # proba that (Xp05,Xp1) corresponds to transport of X by f, after a time dt.
 #Klauder perterson scheme
@@ -111,8 +108,8 @@ def P_obs(h,t,s,X,y):
 # proba that the measure of X corresponds to observation y
 
 	P = norme_vec(h(X,t) - y)**2.0 / (2.0  * s * s)
+#	P=0.0
 	return P
-
 
 def ressample(X,w):
 # from M.S. Arulampalam et al., A tutorial on particle filters for online nonlinear / non-Gaussian Bayesian tracking, IEEE Trans. Sign. Proc.
@@ -139,8 +136,6 @@ def ressample(X,w):
 		perm[j]=i
 
 	return Xrs,wrs,perm
-
-
 
 def Hessian(f,X0,dx=0.1):
 	ndim = X0.size
@@ -242,7 +237,6 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
 def norme_vec(a):
 	return np.sum(a*a)**0.5
 
-
 class particle_parameters:
 
 	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),verbose = False, fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
@@ -327,7 +321,6 @@ class particle_parameters:
 		return self.objective
 
 class particle:
-
 	def __init__(self,param):
 
 		self.ptype = param.get_type()
@@ -377,8 +370,6 @@ class particle:
 
 		return Yp1
 
-
-
 	def next_step(self):
 
 		self.X = np.copy(self.Xp1)
@@ -414,7 +405,6 @@ class particle:
 				self.Xp1 = np.copy(Xp1[-self.ndim:])
 				self.intermediate_steps = np.array( [ Xp1[i*self.ndim:(i+1)*self.ndim] for i in range(1,Xp1.shape[0]-2) ] )
 
-
 	def integration(self,X,t):
 	#Klauder perterson scheme
 		mean = np.zeros(X.shape)
@@ -425,7 +415,6 @@ class particle:
 		Xp1 = X+self.dt*(fXp05 + fX)/2.0 + self.g*np.sqrt(self.dt)*mrand(mean,cov)
 
 		return Xp05,Xp1
-
 
 	def F(self,X):
 		""" Xp05 = X[0:self.ndim]
@@ -590,7 +579,6 @@ class particle:
 					self.H = np.eye(2.0*self.ndim)
 					self.L = self.H
 
-
 	def sample(self):
 		if self.ptype is True:
 			print('Reference particle!')
@@ -683,6 +671,7 @@ class particle:
 			print('Reference particle!')
 		else:
 			return self.weight
+
 	def get_old_weight(self):
 		if self.ptype is True:
 			print('Reference particle!')
@@ -691,6 +680,7 @@ class particle:
 
 	def get_last_position(self):
 		return self.X
+
 	def set_last_position(self,X):
 		self.X = X
 
@@ -699,6 +689,7 @@ class particle:
 
 	def get_current_position(self):
 		return self.Xp1
+
 	def set_current_position(self,Xp1):
 		self.Xp1 = Xp1
 
@@ -723,7 +714,6 @@ class particle:
 		n = X0.size/self.ndim
 		self.X0 = X0[0:self.ndim]
 		self.intermediate_steps = np.array([X0[i*self.ndim:(i+1)*self.ndim] for i in np.array(range(1,n-1))])
-
 
 class density_particle:
 	def __init__(self,n_particle = 15, param_ref = particle_parameters(True),param_p = particle_parameters(False),isverbose = False):
@@ -833,13 +823,16 @@ class density_particle:
 
 	def get_p(self,i):
 		return self.liste_p[i]
+
 	def get_ref(self):
 		return self.p_ref
+
 	def get_current_position(self):
 		return self.p_ref.get_current_position()
 
 	def get_estimate_position(self):
 		return self.current_estimate_position
+
 	def get_current_positions(self):
 	# position BEFORE ressampling
 		return self.X_ips
