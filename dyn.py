@@ -53,14 +53,14 @@ def f_burgers(u,t):
 
 def h_burgers(U,t):
 
-	n = np.int_(np.linspace(0,U.size-1,5))
+	n = np.int_(np.linspace(0,U.size-1,U.size))
 #	hU = U
 #	print(np.sum(U))
 #	print(np.max(U))
 #	print(np.min(U))
 #	print(U[n])
 	
-	hU = np.concatenate((np.array([ np.sum(U),np.max(U),np.min(U)]),U[n] ))
+	hU = np.concatenate((U[n], np.array([ np.sum(U),np.max(U),np.min(U)]) ))
 	return hU
 
 def mrand(mean,cov):
@@ -239,7 +239,7 @@ def norme_vec(a):
 
 class particle_parameters:
 
-	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),verbose = False, fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
+	def __init__(self,ptype = False,X_init = np.array([ -4.4090617 ,   0.94099541,  31.65011104]),init_noise = 0.01,verbose = False, fdyn = f_lorenz,h_obs = h_lorenz,dt = 0.01,t0=0.0,s_obs = np.sqrt(0.1),g_int=np.sqrt(2.0),objective = 'filter'):
 		self.ptype = ptype # true if real state, false is particle
 		self.objective = objective # DA for data assimilation, filter for filtering
 		self.fdyn = fdyn # dynamical function
@@ -254,7 +254,7 @@ class particle_parameters:
 		if ptype:
 			self.X = X_init
 		else:
-			self.X = X_init + np.random.normal(0,s_obs,X_init.size)
+			self.X = X_init + np.random.normal(0,init_noise,X_init.size)
 #			self.X[:] = 0
 
 		self.Y = self.h_obs(self.X,self.t)
@@ -337,6 +337,7 @@ class particle:
 
 		self.X = param.get_position()
 		self.Xp1 = np.copy(self.X)
+		self.Xold = np.copy(self.X)
 		self.X0 = np.copy(self.X) # for assimilation
 		self.Xp05 = np.copy(self.X)
 
@@ -411,6 +412,7 @@ class particle:
 				self.X0 = np.copy(Xp1[0:self.ndim])
 				self.Xp1 = np.copy(Xp1[-self.ndim:])
 				self.intermediate_steps = np.array( [ Xp1[i*self.ndim:(i+1)*self.ndim] for i in range(1,Xp1.shape[0]-2) ] )
+		self.Xold = np.copy(self.Xp1)
 
 	def integration(self,X,t):
 	#Klauder perterson scheme
@@ -681,7 +683,7 @@ class particle:
 							res.x =  X04min
 							res.fun = self.F(res.x)
 				else:
-					self.cov_fact = 1
+					self.cov_fact = 1.0
 
 				self.res = res
 				self.Xmin = res.x
@@ -707,12 +709,12 @@ class particle:
 
 			weightisok = False
 			nit = 0
-			cov = self.cov_fact*np.eye(self.Xmin.size) 
+			cov = np.eye(self.Xmin.size) 
 			
 			while weightisok is False:
 				
 				self.eps = mrand(mean,cov)
-				self.EE = 0.5 * norme_vec(self.eps)**2.0
+				self.EE = 0.5 *self.cov_fact* norme_vec(self.eps)**2.0
 				lamda = self.solveEqAlgebraic()
 				Xp1 = self.Xmin + lamda*np.dot(self.L.T , self.eps) / norme_vec(self.eps)
 				weight = self.Id_Weight(Xp1,lamda)
@@ -731,6 +733,7 @@ class particle:
 				print(s)
 				s = 'Xmin: ' + str(self.Xmin[self.ndim:]) + ' to sample: ' + str(Xp1)
 				print(s)
+			self.cov_fact = 1.0
 
 			return Xp1,weight
 
@@ -785,7 +788,6 @@ class particle:
 			rho = norme_vec(self.eps)
 			res = opt.minimize(self.F_ersatz, np.sqrt(rho), method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
 			lamda = res.x
-
 			return lamda
 
 	def Id_Weight(self,X,lamda):
@@ -795,6 +797,7 @@ class particle:
 			rho = norme_vec(self.eps)
 			#numeric estimation of d lamda / d rho
 			dl = 0.01
+
 			Fp = self.F(self.Xmin + (lamda+dl) * np.dot(self.L.T , self.eps) / norme_vec(self.eps))
 			Fm = self.F(X)
 			dldp = dl/(2.0*(Fp-Fm))
@@ -804,8 +807,8 @@ class particle:
 #			print(s)
 			#weight
 			weight = self.weight * np.exp(-self.Fmin) * J
-#			s = 'wn: ' + str(self.weight) + ' expphi: ' + str(np.exp(-self.Fmin)) + ' J: ' + str(J)
-#			print(s)
+			s = 'wn: ' + str(self.weight) + ' Fmin: ' + str(self.Fmin) + ' expphi: ' + str(np.exp(-self.Fmin)) + ' J: ' + str(J)
+			print(s)
 
 			if self.verbose is True:
 				if np.isnan(weight):
@@ -817,7 +820,10 @@ class particle:
 					print(J)
 					print(self.Fmin)
 			if np.isnan(weight):
+				print('isnan')
 				weight = 0
+				print(J)
+				print(self.Fmin)
 			return weight
 
 	def set_weight(self,w):
@@ -847,6 +853,9 @@ class particle:
 
 	def get_current_position(self):
 		return self.Xp1
+		
+	def get_current_position2(self):
+		return self.Xold
 
 	def set_current_position(self,Xp1):
 		self.Xp1 = Xp1
@@ -937,31 +946,37 @@ class density_particle:
 
 # approximate position
 		for i_p in range(0,self.n_particle):
-			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
+			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * (1.0 / self.n_particle)
+#			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
 			
 			if sumw ==0:
 				self.liste_p[i_p].temporary_set_var(15)
 
-		try:
-			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * self.w[0]
-		except:
-			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * 0.0
-		for i_p in range(1,self.n_particle):
-			try:
-				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * self.w[i_p]
-			except:
-				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * 0.0
-			
+#		try:
+##			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * self.w[0]
+#			self.intermediate_steps = self.liste_p[0].get_intermediate_steps()* (1.0/self.n_particle)
+#		except:
+##			self.intermediate_steps = self.liste_p[0].get_intermediate_steps() * 0.0
+#			self.intermediate_steps = self.liste_p[0].get_intermediate_steps()* (1.0/self.n_particle)
+#		for i_p in range(1,self.n_particle):
+#			try:
+##				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * self.w[i_p]
+#				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * (1.0 / self.n_particle)
+#			except:
+##				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps() * 0.0
+#				self.intermediate_steps = self.intermediate_steps + self.liste_p[i_p].get_intermediate_steps()* (1.0 / self.n_particle)
+#			
 #		print(w)
 
 
 #ressample	
+		print(self.w)
 		doressample = False
 		if np.random.uniform()<0.05: # force ressample from time to time
 			doressample = True
-		if self.w.min() < 1e-8: # one particle is neglectible
+		if self.w.min() < 1e-25: # one particle is neglectible
 			doressample = True
-		if self.w.max() > 5.0/self.n_particle: # one particle is too important
+		if self.w.max() > 1.0-1e-25: # one particle is too important
 			doressample = True
 
 		if doressample is True:
@@ -975,6 +990,8 @@ class density_particle:
 
 				self.liste_p[i_p].set_weight(wrs[i_p]/np.sum(wrs))
 				self.liste_p[i_p].set_current_position(Xrs[:,i_p])
+				self.liste_p[i_p].temporary_set_var(2.0)
+#				print(self.liste_p[i_p].EE)
 
 	def new_data_provided(self,boolean):
 		self.new_data = boolean

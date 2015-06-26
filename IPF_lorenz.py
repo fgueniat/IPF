@@ -15,10 +15,11 @@ if scenario == 'lorenz':
 	t0 = 0
 	s_obs = np.sqrt(1.0)
 	g_int = np.sqrt(1.0)
+	init_noise = 0.1
 	objective = 'filter'
-	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective)
+	ref_param = d.particle_parameters(True,X_init,init_noise,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective)
 	n_particle = 10
-	ps_param = [d.particle_parameters(False,X_init,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
+	ps_param = [d.particle_parameters(False,X_init,init_noise,isverbose, d.f_lorenz,d.h_lorenz,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
 
 	ref_param.set_verbose(False)
 if scenario == 'roessler':
@@ -27,30 +28,31 @@ if scenario == 'roessler':
 	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
 	ref_param.set_verbose(False)
 if scenario == 'burgers':
-	x = np.linspace(-1,1,30)
+	x = np.linspace(-1,1,21)
 #	X_init = np.exp(- x**2)
 ##	X_init = np.exp(- x**2) + 5*np.sinc(np.pi*x)
 #	X_init = X_init - X_init.min()
 #	X_init = X_init/X_init.max()
 #	X_init = (2*X_init-1)/2
 	X_init = np.sinc(np.pi * x)
-	X_init = X_init/np.max(np.abs(X_init))
+	X_init = X_init/np.max(np.abs(X_init))+0.3
 	isverbose = False
 	dt = 0.01
 	t0 = 0
-	s_obs = np.sqrt(0.01)
-	g_int = np.sqrt(0.01)
+	s_obs = np.sqrt(1.0)
+	g_int = np.sqrt(0.0001)
+	init_noise = 0.1
 	objective = 'filter'
-	ref_param = d.particle_parameters(True,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
-	n_particle = 10
-	ps_param = [d.particle_parameters(False,X_init,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
+	ref_param = d.particle_parameters(True,X_init,init_noise,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
+	n_particle = 15
+	ps_param = [d.particle_parameters(False,X_init,init_noise,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
 	ref_param.set_verbose(False)
 
 
 ndim = ref_param.get_dim()
 
 
-n_t = 10
+n_t = 50
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))
@@ -91,20 +93,19 @@ for i_t in range(1,n_t):
 	if obs_strat[i_t]==1:
 		rec_traj[:,i_t] = density.get_estimate_position()
 
-		intermediate_steps = density.get_estimate_intermediate_position()
+#		intermediate_steps = density.get_estimate_intermediate_position()
 
-		for i_obs in range(0,compteur_obs):
-
-			rec_traj[:,i_t - (compteur_obs - i_obs)] = intermediate_steps[i_obs]
+#		for i_obs in range(0,compteur_obs):
+#			rec_traj[:,i_t - (compteur_obs - i_obs)] = intermediate_steps[i_obs]
 			
 #	X_ips = density.get_current_positions()
 		for i_p in range(0,n_particle):
-			lpath[i_p][:,i_t] = density.get_current_positions()[:,i_p]
+#			lpath[i_p][:,i_t] = density.get_current_positions()[:,i_p]
+			lpath[i_p][:,i_t] = density.get_p(i_p).get_current_position2()
 
-			intermediate_steps = density.get_estimate_intermediate_positions(i_p)
-			for i_obs in range(0,compteur_obs):
-				lpath[i_p][:,i_t - (compteur_obs - i_obs)] = intermediate_steps[i_obs]
-#				rec_traj[:,i_t - (compteur_obs - i_obs)] = rec_traj[:,i_t - (compteur_obs - i_obs)] + density.get_p(i_p).get_weight() * lpath[i_p][:,i_t - (compteur_obs - i_obs)]
+#			intermediate_steps = density.get_estimate_intermediate_positions(i_p)
+#			for i_obs in range(0,compteur_obs):
+#				lpath[i_p][:,i_t - (compteur_obs - i_obs)] = intermediate_steps[i_obs]
 
 				
 
@@ -139,9 +140,16 @@ if isplot is True:
 		plot_tools.multiplot2(False,x,y,['or','.k'])
 	if scenario == 'burgers':
 		for it in range(i_t+1):
-			x = (traj[:,it],rec_traj[:,it],obs[:,it])
-			plot_tools.multiplot1(False,x,['b','k','r'])
+			x = (traj[:,it],rec_traj[:,it])
+			plot_tools.multiplot1(False,x,['r','k'])
 			plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
+			closeall()
+		for it in range(i_t+1):
+			x = (traj[:,it],)
+			for ip in range(n_particle):
+				x = x+(lpath[ip][:,it],)
+			plot_tools.multiplot1(False,x,['r','k'])
+			plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/all',it)
 			closeall()
 
 
