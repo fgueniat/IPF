@@ -39,7 +39,7 @@ if scenario == 'burgers':
 	isverbose = False
 	dt = 0.01
 	t0 = 0
-	s_obs = np.sqrt(1.0)
+	s_obs = np.sqrt(0.01)
 	g_int = np.sqrt(0.0001)
 	init_noise = 0.1
 	objective = 'filter'
@@ -52,7 +52,7 @@ if scenario == 'burgers':
 ndim = ref_param.get_dim()
 
 
-n_t = 50
+n_t = 15
 
 rec_traj = np.zeros((ndim,n_t))
 traj = np.zeros((ndim,n_t))

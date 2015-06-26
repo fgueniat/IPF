@@ -137,7 +137,7 @@ def ressample(X,w):
 
 	return Xrs,wrs,perm
 
-def Hessian(f,X0,dx=0.1):
+def Hessian(f,X0,dx=0.01):
 	ndim = X0.size
 	H = np.zeros((ndim,ndim))
 	for i1 in range(0,ndim):
@@ -368,6 +368,9 @@ class particle:
 		mean = np.zeros(hX.shape)
 		cov = np.eye(hX.size)
 		Yp1 = hX + self.s*mrand(mean,cov)
+		print('noise')
+		print(Yp1-hX)
+		print(norme_vec(Yp1-hX))
 
 		return Yp1
 
@@ -643,7 +646,7 @@ class particle:
 				self.Fmin = res.fun
 
 
-				self.H = Hessian(self.F,self.Xmin, 0.1)
+				self.H = Hessian(self.F,self.Xmin, 0.01)
 #				print(np.linalg.cond(self.H))
 				try:
 					self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
@@ -691,7 +694,7 @@ class particle:
 				if res.success is True:
 					self.H = Hessian(self.F,self.Xmin, 0.1)
 					try:
-						self.L = np.linalg.cholesky(np.linalg.pinv(self.H))
+						self.L = np.linalg.cholesky(np.linalg.pinv(self.H))	
 					except np.linalg.LinAlgError:
 						print('use of gmw')
 						self.L = gen_cholesky(np.linalg.pinv(self.H))
@@ -712,7 +715,7 @@ class particle:
 			cov = np.eye(self.Xmin.size) 
 			
 			while weightisok is False:
-				
+				self.cov_fact = 100
 				self.eps = mrand(mean,cov)
 				self.EE = 0.5 *self.cov_fact* norme_vec(self.eps)**2.0
 				lamda = self.solveEqAlgebraic()
@@ -807,7 +810,13 @@ class particle:
 #			print(s)
 			#weight
 			weight = self.weight * np.exp(-self.Fmin) * J
-			s = 'wn: ' + str(self.weight) + ' Fmin: ' + str(self.Fmin) + ' expphi: ' + str(np.exp(-self.Fmin)) + ' J: ' + str(J)
+			Fint= P_int_min(self.fdyn,self.t,self.dt,self.g,self.X[-self.ndim:],self.Xmin[-self.ndim:])
+
+			Fobs = P_obs(self.h_obs,self.t,self.s,self.Xmin[-self.ndim:],self.Yp1)
+				
+			s = 'wn: ' + str(self.weight) + ' Fmin: ' + str(self.Fmin) + ' expphi: ' + str(np.exp(-self.Fmin)) + ' J: ' + str(J) + ' l: ' +str(lamda) + ' L: ' + str(np.trace(self.L))
+			print(s)
+			s = ' Fint: ' + str(Fint) + ' Fobs: ' + str(Fobs) + '  sum: ' + str(Fobs+Fint)
 			print(s)
 
 			if self.verbose is True:
@@ -946,8 +955,8 @@ class density_particle:
 
 # approximate position
 		for i_p in range(0,self.n_particle):
-			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * (1.0 / self.n_particle)
-#			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
+#			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * (1.0 / self.n_particle)
+			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
 			
 			if sumw ==0:
 				self.liste_p[i_p].temporary_set_var(15)
@@ -972,11 +981,11 @@ class density_particle:
 #ressample	
 		print(self.w)
 		doressample = False
-		if np.random.uniform()<0.05: # force ressample from time to time
+#		if np.random.uniform()<0.05: # force ressample from time to time
+#			doressample = True
+		if self.w.min() < 1e-10: # one particle is neglectible
 			doressample = True
-		if self.w.min() < 1e-25: # one particle is neglectible
-			doressample = True
-		if self.w.max() > 1.0-1e-25: # one particle is too important
+		if self.w.max() > 1.0-1e-10: # one particle is too important
 			doressample = True
 
 		if doressample is True:
