@@ -53,13 +53,13 @@ def f_burgers(u,t):
 
 def h_burgers(U,t):
 
-	n = np.int_(np.linspace(0,U.size-1,U.size))
-#	hU = U
+	n = np.int_(np.linspace(0,U.size-1,5))
+#	n = np.int_(np.linspace(0,U.size-1,U.size))
+#	hU = np.copy(U)
 #	print(np.sum(U))
 #	print(np.max(U))
 #	print(np.min(U))
 #	print(U[n])
-	
 	hU = np.concatenate((U[n], np.array([ np.sum(U),np.max(U),np.min(U)]) ))
 	return hU
 
@@ -76,22 +76,25 @@ def kp(f,point,t,dt,g=np.sqrt(2)):
 #Klauder perterson scheme
 	mean = np.zeros(point.shape)
 	cov = g*dt*np.eye(point.size)
-	fp = f(point,t)
+	fp = np.copy(f(point,t))
 	pstar = point + dt*fp + mrand(mean,cov)
 	fps = f(pstar,t)
 
 	return point+dt*(fps + fp)/2.0 + mrand(mean,cov),pstar,fp,fps
 
+
 def P_int(f,t,dt,g,X,Xp05,Xp1):
 # proba that (Xp05,Xp1) corresponds to transport of X by f, after a time dt.
 #Klauder perterson scheme
 
-	fX = f(X,t)
-	P1 = norme_vec( Xp05 - X - dt * fX )**2.0 / (2.0 * dt * g * g)
+	fX = f(X,t) +0.0
+	P1 = norme_vec( Xp05 - X - dt * fX )**2.0 / (2.0 * dt * g * g)+0.0
 
-	P2 = norme_vec( Xp1 - X - dt * ( fX + f(Xp05,t) )/2.0 )**2.0 / (2.0 * dt * g * g)
-
+	P2 = norme_vec( Xp1 - X - dt * ( fX + f(Xp05,t) )/2.0 )**2.0 / (2.0 * dt * g * g)+0.0
+	
 	return P1+P2
+#	return 0.0
+
 
 def P_int_min(f,t,dt,g,X,Xp1):
 # proba that (Xp05,Xp1) corresponds to transport of X by f, after a time dt.
@@ -100,14 +103,15 @@ def P_int_min(f,t,dt,g,X,Xp1):
 	fX = f(X,t)
 	Xs = X + dt * fX
 	
-	P = norme_vec( Xp1 - X - dt * ( fX + f(Xs,t) )/2.0 )**2.0 / (2.0 * dt * g * g)
-
+	P = norme_vec( Xp1 - X - dt * ( fX + f(Xs,t) )/2.0 )**2.0 / (2.0 * dt * g * g) +0.0
+#	P = norme_vec( Xp1 - X - dt * ( fX + f(Xs,t) )/2.0 )**2.0 / (2.0 * g * g)
+	#P = 0.0
 	return P
 
 def P_obs(h,t,s,X,y):
 # proba that the measure of X corresponds to observation y
 
-	P = norme_vec(h(X,t) - y)**2.0 / (2.0  * s * s)
+	P = norme_vec(h(X,t) - y)**2.0 / (2.0  * s * s)+0.0
 #	P=0.0
 	return P
 
@@ -116,7 +120,33 @@ def ressample(X,w):
 	Ns = w.size
 	wrs = np.ones(Ns)/Ns
 	cdf = np.zeros(Ns)
-	Xrs = X
+	Xrs = np.copy(X)
+	for i in range(1,Ns):
+		cdf[i] = cdf[i-1] + w[i]
+	i=0
+	u0 = np.random.uniform(0,1.0/Ns)
+	u = np.zeros(Ns)
+	perm = np.zeros(Ns)
+	for j in range(Ns):
+		u[j] = u0 + 1.0*j/Ns
+		i=0
+
+		while u[j]>cdf[i]:
+			if i<Ns-1:
+				i=i+1
+			else:
+				break
+
+		Xrs[:,j] = X[:,i]
+		perm[j]=i
+
+	return Xrs,wrs,perm
+
+def partial_ressample(X,w):
+	Ns = w.size
+	wrs = np.ones(Ns)/Ns
+	cdf = np.zeros(Ns)
+	Xrs = np.copy(X)
 	for i in range(1,Ns):
 		cdf[i] = cdf[i-1] + w[i]
 	i=0
@@ -137,6 +167,7 @@ def ressample(X,w):
 
 	return Xrs,wrs,perm
 
+	
 def Hessian(f,X0,dx=0.01):
 	ndim = X0.size
 	H = np.zeros((ndim,ndim))
@@ -235,7 +266,7 @@ def gen_cholesky(H, eps_machine=1e-15, print_prefix=0, print_flag=0):
 	return L
 
 def norme_vec(a):
-	return np.sum(a*a)**0.5
+	return np.sum(a**2)**0.5
 
 class particle_parameters:
 
@@ -254,7 +285,13 @@ class particle_parameters:
 		if ptype:
 			self.X = X_init
 		else:
-			self.X = X_init + np.random.normal(0,init_noise,X_init.size)
+			Xr = np.random.normal(0,init_noise,X_init.size)
+			Xr[1:-1] = (Xr[0:-2] +  Xr[1:-1] + Xr[2:])/3.0
+			Xr[0] = (Xr[-1] +  Xr[0] + Xr[1])/3.0
+			Xr[-1] = (Xr[-2] +  Xr[-1] + Xr[0])/3.0
+
+#			self.X = X_init + np.random.normal(0,init_noise/100.0,X_init.size) + np.random.normal(0,init_noise,1)
+			self.X = X_init + Xr + np.random.normal(0,init_noise,1)
 #			self.X[:] = 0
 
 		self.Y = self.h_obs(self.X,self.t)
@@ -367,10 +404,11 @@ class particle:
 		hX = self.h_obs(X,t)
 		mean = np.zeros(hX.shape)
 		cov = np.eye(hX.size)
-		Yp1 = hX + self.s*mrand(mean,cov)
-		print('noise')
-		print(Yp1-hX)
-		print(norme_vec(Yp1-hX))
+		Yp1 = hX + self.s**2.0*mrand(mean,cov)
+
+#		print('noise')
+#		print(Yp1-hX)
+#		print(norme_vec(Yp1-hX))
 
 		return Yp1
 
@@ -382,7 +420,10 @@ class particle:
 		if self.ptype is True:
 			self.Xp05,self.Xp1 = self.integration(self.X,self.t)
 			self.path = np.vstack((self.path,self.Xp1))
+			print('ref')
+			print(self.Xp1[-self.ndim:])
 			self.Yp1 = self.compute_obs(self.Xp1,self.t)
+			print(self.Yp1)
 			
 		else:
 			if self.objective == 'filter':
@@ -491,12 +532,9 @@ class particle:
 				Fobs = P_obs(self.h_obs,self.t,self.s,X[-self.ndim:],self.Yp1)
 
 				Fx = Fint+Fobs
+#				Fx = Fobs
 
 		return Fx
-
-
-
-
 
 	def F_ersatz(self,lamda):
 		X = self.Xmin + lamda*np.dot(self.L.T , self.eps) / norme_vec(self.eps)
@@ -627,18 +665,20 @@ class particle:
 
 			if self.objective == 'filter':
 #construction of a good set of initial conditions
-				X04min = np.zeros(2*self.ndim*self.n_obs)
+#				X04min = np.zeros(2*self.ndim*self.n_obs)
 				Xp05,Xp1 = self.integration(self.X,self.t)
 				X04min = np.copy(Xp1)
-				self.debug = X04min
-
+	
 # minimisation
 #				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
 #				print(X04min)
 				res = opt.minimize(self.F, X04min, method='BFGS')
 				s = 'F = ' + str(self.F(res.x)) 
 #				print(s)
-
+				print('results min')
+#				print(self.Yp1)
+#				print(res.x)
+	#			print(self.Yp1-res.x)
 
 
 				self.res = res
@@ -702,7 +742,6 @@ class particle:
 					self.H = np.eye(2.0*self.ndim)
 					self.L = self.H
 
-
 	def sample(self):
 		if self.ptype is True:
 			print('Reference particle!')
@@ -715,7 +754,7 @@ class particle:
 			cov = np.eye(self.Xmin.size) 
 			
 			while weightisok is False:
-				self.cov_fact = 100
+				self.cov_fact = 1
 				self.eps = mrand(mean,cov)
 				self.EE = 0.5 *self.cov_fact* norme_vec(self.eps)**2.0
 				lamda = self.solveEqAlgebraic()
@@ -818,6 +857,9 @@ class particle:
 			print(s)
 			s = ' Fint: ' + str(Fint) + ' Fobs: ' + str(Fobs) + '  sum: ' + str(Fobs+Fint)
 			print(s)
+#			print(self.Xmin[-self.ndim:])
+#			print(self.h_obs(self.Xmin[-self.ndim:],self.t))
+#			print(self.Yp1)
 
 			if self.verbose is True:
 				if np.isnan(weight):
@@ -955,8 +997,8 @@ class density_particle:
 
 # approximate position
 		for i_p in range(0,self.n_particle):
-#			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * (1.0 / self.n_particle)
-			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
+			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * (1.0 / self.n_particle)
+#			self.current_estimate_position = self.current_estimate_position + self.liste_p[i_p].get_current_position() * self.w[i_p]
 			
 			if sumw ==0:
 				self.liste_p[i_p].temporary_set_var(15)

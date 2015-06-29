@@ -53,16 +53,28 @@ def plot2(figure,a,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 def plot1(figure,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 
 	a = range(0,np.size(b))
-	figure = plot2(figure,a,b,mark_col,a_label,b_label)
-	return figure
+	if figure is False:
+		fig, ax = pyplot.subplots()
+	else:
+		fig = figure[0]
+		ax = figure[1]
+	figure = (fig,ax)
+	plot2(figure,a,b,mark_col,a_label,b_label)
+	return  (fig,ax)
 
 
 def multiplot1(figure,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 	a = (np.array(range(0,b[0].size)),)
 	for i in range(1,len(b)):
 		a = a + (np.array(range(0,b[i].size)),)
-	fig = multiplot2(figure,a,b,mark_col,a_label,b_label)
-	return fig
+	if figure is False:
+		fig, ax = pyplot.subplots()
+	else:
+		fig = figure[0]
+		ax = figure[1]
+	figure = (fig,ax)
+	figure = multiplot2(figure,a,b,mark_col,a_label,b_label)
+	return figure
 
 def multiplot2(figure,a,b,mark_col="-k",a_label = 'axis 1',b_label = 'axis 2'):
 

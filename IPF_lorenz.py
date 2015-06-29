@@ -28,7 +28,7 @@ if scenario == 'roessler':
 	ps_param = [d.particle_parameters(False) for i in range(n_particle)]
 	ref_param.set_verbose(False)
 if scenario == 'burgers':
-	x = np.linspace(-1,1,21)
+	x = np.linspace(-1.,1.,21)
 #	X_init = np.exp(- x**2)
 ##	X_init = np.exp(- x**2) + 5*np.sinc(np.pi*x)
 #	X_init = X_init - X_init.min()
@@ -39,12 +39,14 @@ if scenario == 'burgers':
 	isverbose = False
 	dt = 0.01
 	t0 = 0
-	s_obs = np.sqrt(0.01)
-	g_int = np.sqrt(0.0001)
-	init_noise = 0.1
+#	s_obs = np.sqrt(0.01)
+#	g_int = np.sqrt(0.0001)
+	s_obs = np.sqrt(.2)
+	g_int = np.sqrt(.2)
+	init_noise = .1
 	objective = 'filter'
 	ref_param = d.particle_parameters(True,X_init,init_noise,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective)
-	n_particle = 15
+	n_particle = 10
 	ps_param = [d.particle_parameters(False,X_init,init_noise,isverbose, d.f_burgers,d.h_burgers,dt,t0,s_obs,g_int,objective) for i in range(n_particle)]
 	ref_param.set_verbose(False)
 
@@ -140,16 +142,23 @@ if isplot is True:
 		plot_tools.multiplot2(False,x,y,['or','.k'])
 	if scenario == 'burgers':
 		for it in range(i_t+1):
-			x = (traj[:,it],rec_traj[:,it])
-			plot_tools.multiplot1(False,x,['r','k'])
-			plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
+#			x = (traj[:,it],rec_traj[:,it])
+#			plot_tools.multiplot1(False,x,['r','k'])
+			x = (traj[:,it],rec_traj[:,it],obs[:,it])
+			fig =plot_tools.multiplot1(False,x,['r','k',' b'])
+			fig[1].set_ylim((-0.5,1.8))
+			#plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/',it)
+			plot_tools.save('D:\\temp\\FSU\\ipf\\',it)
 			closeall()
 		for it in range(i_t+1):
-			x = (traj[:,it],)
+			x = (traj[:,it],obs[:,it],)
 			for ip in range(n_particle):
 				x = x+(lpath[ip][:,it],)
-			plot_tools.multiplot1(False,x,['r','k'])
-			plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/all',it)
+#			plot_tools.multiplot1(False,x,['r','k'])
+			fig = plot_tools.multiplot1(False,x,['r',' b','k'])
+			fig[1].set_ylim((-0.5,1.8))
+			#plot_tools.save('/media/DATA_MIXTE/code/python/IPF/fig/all',it)
+			plot_tools.save('D:\\temp\\FSU\\ipf\\all',it)
 			closeall()
 
 
