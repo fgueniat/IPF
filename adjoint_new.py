@@ -60,7 +60,7 @@ def Plot(unp1,un):
 	pt.multiplot1(False,(unp1,un),('-r','-k'))
 
 def Observable(u):
-	y = np.copy(u)
+	y = np.copy(u) + 0.01*np.random.normal(0,0.1,u.size)
 	return y
 
 class Parameters():
@@ -209,11 +209,11 @@ if __name__ == '__main__':
 	x = np.linspace(xl,xr,nx)
 	dx = (xr-xl)/nx
 	dt = 0.05
-	nt = 15
+	nt = 50
 	T = dt*nt
 	param = Parameters(dx,dt,nx,nt,nx)
 
-	u0 = 0.2*( 1.05 + -np.sin( -np.pi + 2.0*np.pi*(x-xl)/(xr-xl) ) ) + 0.2*np.random.normal(0,0.1,x.size)
+	u0 = 0.2*( 1.05 + -np.sin( -np.pi + 2.0*np.pi*(x-xl)/(xr-xl) ) ) + 1.0*np.random.normal(0,0.1,x.size)
 	U = np.zeros((nx,nt))
 	U[:,0] = u0
 
@@ -232,14 +232,15 @@ if __name__ == '__main__':
 		Y[:,i] = Observable(unp1)
 
 	param.obs = Y
-	p0 = 0.1*( 0.25 + -np.sin( -np.pi + 2.05*np.pi*(x-xl)/(xr-xl) ) ) + 0.3*np.random.normal(0,0.1,x.size)
+	p0 = 0.1*( 0.25 + -np.sin( -np.pi + 1.05*np.pi*(x-xl)/(xr-xl) ) ) + 0.3*np.random.normal(0,0.1,x.size)
 #	p0 = 0.2*( 1.05 + -np.sin( -np.pi + 2.0*np.pi*(x-xl)/(xr-xl) ) ) + 0.2*np.random.normal(0,0.1,x.size)
 	# brute force
 #	ic_opt = fmin_bfgs(Functionnal_p,p0,None,(param,))
 
 	pt.closeall()
-	ic_opt = fmin_l_bfgs_b(Functionnal_p,p0,Grad_Functional,(param,))
-	Plot(u0,ic_opt[0])
+	ic_opt = fmin_l_bfgs_b(Functionnal_p,p0,Grad_Functional,(param,),iprint=1)
+	Plot(u0,p0)
+	Plot(u0,p0)
 	Plot(u0,ic_opt[0])
 	#Plot(u0,p0)
 

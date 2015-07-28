@@ -19,12 +19,12 @@ def h_lorenz(X,t):
 
 #	hX = X[1]
 	hX = np.abs(np.sum(X))
-#	hX = X
+#	hX = X + 0.0
 	return hX
 
 def f_burgers(u,t):
 	# burgers. Upwind scheme + central diff
-	nu = 0.01
+	nu = 0.001
 
 	dx = 1./u.size
 # advection
@@ -129,7 +129,7 @@ def ressample(X,w):
 	perm = np.zeros(Ns)
 	for j in range(Ns):
 		u[j] = u0 + 1.0*j/Ns
-		i=0
+#		i=0
 
 		while u[j]>cdf[i]:
 			if i<Ns-1:
@@ -665,14 +665,18 @@ class particle:
 
 			if self.objective == 'filter':
 #construction of a good set of initial conditions
-#				X04min = np.zeros(2*self.ndim*self.n_obs)
-				Xp05,Xp1 = self.integration(self.X,self.t)
-				X04min = np.copy(Xp1)
+
+#				X04min = np.zeros(2*self.ndim*self.n_obs)
+#				Xp05,Xp1 = self.integration(self.X,self.t)
+#				X04min = np.copy(Xp1)
+#				Xp05,Xp1 = self.integration(self.X,self.t)
+				X04min = np.copy(self.X)
 	
 # minimisation
 #				res = opt.minimize(self.F, X04min, method='BFGS',options={'gtol': 1e-4,'disp':self.verbose})
 #				print(X04min)
-				res = opt.minimize(self.F, X04min, method='BFGS')
+#				res = opt.minimize(self.F, X04min, method='BFGS')
+				res = opt.minimize(self.F, X04min, method='powell')
 				s = 'F = ' + str(self.F(res.x)) 
 #				print(s)
 				print('results min')
@@ -836,7 +840,7 @@ class particle:
 		if self.ptype is True:
 			print('Reference particle!')
 		else:
-			rho = norme_vec(self.eps)
+			rho = norme_vec(self.eps)**2
 			#numeric estimation of d lamda / d rho
 			dl = 0.01
 
