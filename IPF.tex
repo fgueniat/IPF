@@ -20,7 +20,6 @@
 \newcommand{\issue}[1]{{\color{gray} #1 }}
 \newcommand{\quest}[1]{{\color{blue} #1 }}
 \newcommand{\todo}[1]{{\color{red} #1 }}
-\newcommand{\monfloor}[1]{\left\lfloor #1\right\rfloor}
 
 
 % shortcut
@@ -104,20 +103,29 @@
 \label{sec-intro}
 
 In this article, the numerical cost and the accuracy of Implicit Particle Filter (IPF) are quantified, using Burger's equations and shallow water equations as scenarios.
-Identifying the uncertities in a data assimilation problem are specifically addressed.
+Identifying the uncertities in a data assimilation problem is specifically addressed.
 
-IPF aims at estimating the state, the initial conditions or some parameters of a system, by using a model and observations. The observations can be noisy, and the model can be uncertain.
-%Further developments are considered
+IPF aims at estimating or the state, or the initial conditions or or some parameters of a system, by coupling a model and observations. 
+A noise component can be present in both the observations and the model. 
+Such an aim is of importance in many domains, most notably meteorology\todo{ref}, where initial conditions compatible with observations leads to accurate predictions. 
+If not the case, as expected from a chaotic system, the accuracy of the forecast can drop significantly.
+Seismography{ref} is an other field of importance for data assimilation, \emph{e.g.}, to locate epicenter.
+It has been also successfully applied to nuclear fusion\footnote{Cacuci, D. G., \& Ionescu-Bujor, M. (2010). Best-Estimate model calibration and prediction through experimental data assimilation-I: Mathematical framework. Nuclear science and engineering, 165(1), 18-44.} and agronomy \footnote{Guerif, M., \& Duke, C. L. (2000). Adjustment procedures of a crop model to the site specific characteristics of soil and crop using remote sensing data assimilation. Agriculture, ecosystems \& environment, 81(1), 57-69.}.
 
-When the model is linear, and the noise Gaussian, the most suited class of methods are the Kalman filters. Uncertaintities are directly related to the parameters of the Gaussian. The generalization of Kalman filters, ensemble Kalman filters,~\cite{Evensen2009}, can deal with non-linear model by using replica (particles) of the system to represent the posterior density of solutions, but it can perform poorly when the errors and noises are not Gaussian, \cite{Miller1999}. 
+When the model is linear, and the noise Gaussian, the most suited class of methods are the Kalman filters. 
+Uncertaintities are directly related to the parameters of the Gaussian, which are totally determined by the Kalman filter. 
+The generalization of Kalman filters, ensemble Kalman filters,~\cite{Evensen2009}, can deal with non-linear model by using replica (particles) of the system, to represent the prior density of solutions. 
+Nevertheless, it performs poorly when the errors and noises are not Gaussian, \cite{Miller1999}. 
 4D-Var and cost function-minimization techniques are very popular methods, giving usually accurate results, but they fail at quantifying the uncertainties in the results, with respect to the noise in the model and observations. 
 The sensitivity analysis can not be considered as accurate, as soon as the noise can not be considered as small~\todo{cite Plessix, review}.
 Moreover, results are actually biased if the posterior pdf is multimodal, \cite{Rabier1992}.
 
 Indeed, IPF have been successfully used for data assimilation, \cite{Chorin2010}, system identification, \cite{Morzfeld2012}, and parameter estimation. 
 It is particularly relevant for multimodal pdf ; it provides an unbiased estimate of the solutions, \citep{Atkins2013}.
-The method relies on a few, carefully chosen, particles for the quantification of the conditional pdf of the system. 
-Identifying these particles is done through a (costly) minimization, ensuring that each particle is associated with an high probable area of the pdf. 
+As for Markov-Chain Monte Carlo method, IPF relies on a set of particles for the quantification of the conditional pdf of the system.
+The main difference lies in the fact that only a few, weighted hence carefully chosen particles are considered.  
+Identifying these particles is done through the maximisation of a tailor-constructed probability.
+It ensures that each particle is associated with relevant informations of the pdf. 
 The moments of the estimated pdf, as in standard MCMC methods, might be used for quantifying the uncertainties.
 
 In this article, the precision and accuracy of IPF is qualitatively shown, and a roadmap for tackling the computational costs issue is proposed.
@@ -149,22 +157,20 @@ Minimizing $\costf$ gives the best initial conditions, in the sense that Eq.~\eq
 Efficient and reliable methods for minimizing, such as the BFGS\todo{ref} algorithm, need the gradient of the functional with respect to the parameters. When $\Nphaz$ is large, approximating the gradient with finite differences become impractical. An powerful alternative to compute the gradient is to solve the adjoint equation\todo{ref}.
 \subsection{Computing the gradient of the cost functional}
 
-\subsubsection{Theoretical part}
-
 Identifying the minimum of the $\costf$ relies on the gradient of the functional with respect to the parameters: $D_q\costf = \frac{D\,\costf}{Dq}$.
 For that, one can introduce the Lagrangian $\lag$, associated with the two lagrangian parameters $\lambda$ and $\mu$:
 \begin{equation} \lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\costff(\point,q,t) + \lambda^{\dagger}\fdyn(\point,\dot{\point},q,t) \bigg] dt + \mu^{\dagger} g(\point(0),q) 
 \label{eq-lag}
 \end{equation}
-where $^{\dagger}$ is the transpose operator. 
-As $\fdyn$ and $g$ are null by construction, $\lambda$ and $\mu$ can be designed for alleviating the computations.
+where $^{\dagger}$ is the transpose operator. Naturally, both $\point$ and $\dot{\point}$ are considered as variables.
+As $\fdyn$ and $g$ are null by construction, $\lambda$ and $\mu$ can be designed specifically to alleviate the computations.
 
 The gradiant $D_q\lag = \frac{D\lag}{Dq}$ of $\lag$ is:
 
 \begin{equation}
 \begin{split}
-&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\partial_u\costff(\point,q,t)d_qu  +\partial_{q} \costff(\point,q,t) + \\
-& \qquad \lambda^{\dagger} \partial_u  \fdyn(\point,\dot{\point},q,t) d_q \point + \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point}  + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg]dt + \\
+&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\partial_{\point}\costff(\point,q,t)d_q \point  +\partial_{q} \costff(\point,q,t) + \\
+& \qquad \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) d_q \point + \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point}  + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg]dt + \\
 & \qquad \mu^{\dagger} \partial_{\point(0)} g(\point(0),q) dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) .
 \end{split}
 \label{eq-deriv_lag}
@@ -173,16 +179,16 @@ As a matter of facts, $D_q\lag = D_q \costf$.
 
 The term in $d_{\dot{\point}}$ can not be easily estimated. An integration by parts gives:
 
-$$\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(u,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt$$
+$$\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt$$
 The term associated with $d_{\dot{\point}}$ can now be replaced in Eq.~\eqref{eq-deriv_lag}.
 Ordering terms in this equation leads to:
 
 \begin{equation}
 \begin{split}
 &D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \\
-& \qquad \int_0^T  \bigg[  \mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(u,\dot{\point},q,t)}} d_q \point   +\\
+& \qquad \int_0^T  \bigg[  \mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}} d_q \point   +\\
 & \qquad \partial_{q} \costff(\point,q,t)    + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg] dt + \\
-& \qquad \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(u,\dot{\point},q,t) }|_0 dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) + \mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)
+& \qquad \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) }|_0 dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) + \mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)
 \end{split}
 \label{eq-deriv_ord}
 \end{equation}
@@ -279,11 +285,12 @@ The fact that noises in Eqs.~\eqref{eq-TM} and \eqref{eq-obs} are Gaussian does 
 
 The probability that the $\Nphaz$-dimensional random variable $\rpoint^{n+1}$ coincide with a solution of the system described in Eq.~\eqref{eq-dyn}, at time $n+1$ and with the state $\point_{n}$ as initial condition, is given by:
 $$P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} = P\mypar{\rpoint^{n+1}|\point_n}.$$ 
-This probability only depends on the system equations, \emph{i.e.} Eqs.~\eqref{eq-dyn} and \eqref{eq-TM}. The noise being Gaussian, the conditional probability is:
+This probability only depends on the system equations, \emph{i.e.} Eqs.~\eqref{eq-dyn} and \eqref{eq-TM}. When dealing with a Wiener process, the conditional probability is:
 \begin{equation}
 P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} \propto \exp \mypar{- \norme{\rpoint^{n+1} - \fint\mypar{\point_n}}^2/2\delta t g^2}.
 \label{eq-proba_int}
 \end{equation}
+Note that if the noise is not Gaussian (\emph{i.e.} not described by a Wiener process), it only affects the right side of Eq.~\eqref{eq-proba_int}.
 
 On an other hand, the probability that the observation of the variable $\rpoint^{n+1}$ is compatible with the observation of the system is given by:
 $$P^{n+1}_{obs}\mypar{\rpoint^{n+1}} = P\mypar{h\mypar{\rpoint^{n+1}}|\obs_{n+1}}.$$ 
@@ -485,7 +492,22 @@ Differentiating Eq.~\eqref{eq-ansatz} leads to:
 
 \subsection{Burgers equations}  \label{ssec-results-burgers}
 To illustrate the methodology discussed above, we now consider the Burgers' equations presented is Sec.~\ref{ssec-burgers}.
-The objective is the identification of the initial conditions, knowing only some observations.
+The objective is the identification of the initial conditions, knowing only some observations. 
+The accuracy and the computational costs are estimated. 
+Three main parameters are allowed to variate: the noises in the model g, the noises in the observations s, and finally the dimensions (spatial ? temp?).
+
+\subsubsection{accuracy}
+\begin{itemize}
+\item noise in model
+\item noise in observation
+\item dimensions
+\end{itemize}
+\subsubsection{Computational costs}
+\begin{itemize}
+\item noise in model
+\item noise in observation
+\item dimensions
+\end{itemize}
 
 
 
