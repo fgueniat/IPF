@@ -53,7 +53,7 @@
 \newcommand{\point}{\gras{x}} % point in space phase
 \newcommand{\res}{\gras{\xi}} % a residu
 \newcommand{\rpoint}{X}
-
+\newcommand{\error}{\epsilon} % an error
 
 
 %\input{tex_files/commandes_locales}
@@ -521,6 +521,44 @@ The accuracy and the computational costs are estimated.
 Three main parameters are allowed to variate: the noises in the model g, the noises in the observations s, and finally the dimensions (spatial ? temp?).
 
 \subsubsection{accuracy}
+
+\begin{table}[h!]
+\caption{
+Comparison of mean errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF.
+}
+\begin{centering}
+\begin{tabular}{c|ll|ll|ll}
+$s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2\times 10^{-4} $ } & \multicolumn{2}{|c}{ $ 1.0\times 10^{-2} $ }  \\ 
+\hline 
+  & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} \\ 
+\hline 
+$ g=      1.0\times 10^{-5}$ & $7.6\times 10^{-3}$ & $3.2\times 10^{-5}$ & $7.6\times 10^{-3}$ & $1.0\times 10^{-3}$ & $4.8\times 10^{-2}$ & $4.6\times 10^{-2}$ \\ 
+$g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+\end{tabular}
+\label{tab-mean_errors_burgers}
+\end{centering}
+\end{table}
+
+\begin{table}[h!]
+\caption{
+Comparison of deviation of errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF.
+}
+\begin{centering}
+\begin{tabular}{c|ll|ll|ll}
+$s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2\times 10^{-4} $ } & \multicolumn{2}{|c}{ $ 1.0\times 10^{-2} $ }  \\ 
+\hline 
+  & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} \\ 
+\hline 
+$ g=      1.0\times 10^{-5}$ & $8.6\times 10^{-4}$ & $5.5\times 10^{-6}$ & $9.0\times 10^{-4}$ & $1.6\times 10^{-4}$ & $7.7\times 10^{-3}$ & $7.1\times 10^{-3}$ \\ 
+$g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+\end{tabular}
+\label{tab-std_errors_burgers}
+\end{centering}
+\end{table}
+
+
 \begin{itemize}
 \item noise in model
 \item noise in observation
