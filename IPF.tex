@@ -3,13 +3,11 @@
 
 \usepackage{amssymb,amsbsy,amsmath}
 
-
 \usepackage[utf8]{inputenc}
 \usepackage{xcolor}
 \usepackage{graphicx,subfigure}
 \usepackage[normalem]{ulem}
 \usepackage{placeins}
-
 
 
 %\input{tex_files/commandes}
@@ -128,7 +126,8 @@ Identifying these particles is done through the maximisation of a tailor-constru
 It ensures that each particle is associated with relevant informations of the pdf. 
 The moments of the estimated pdf, as in standard MCMC methods, might be used for quantifying the uncertainties.
 
-In this article, the precision and accuracy of IPF is qualitatively shown, and a roadmap for tackling the computational costs issue is proposed.
+In this article, the precision and accuracy of IPF are qualitatively shown
+and a roadmap for tackling the computational costs issue is proposed.
 
 %\input{tex_files/DA}%
 \section{4D-VAR}
@@ -140,8 +139,10 @@ Let's consider the state vector $\point$ of a system of interest, evolving on th
 \label{eq-system}
 \end{equation} 
 
-The model might not be perfect. Flaws can come, from instance, from uncertainties in the model parameters $q$, or on some initial conditions.
-Consequently, a functional $\costf$ is introduced, in order to fit the model by taking in account observations at hand:
+The model might not be perfect. Flaws can come, for instance, from
+uncertainties in the model parameters $q$ or in some initial conditions.
+Consequently, a functional $\costf$ is introduced, in order to fit the model
+by taking in account observations at hand:
 \begin{equation}
 \costf(\point,q) = \int_0^T  \costff(\point,q,t) dt.
 \label{eq-def_cost}
@@ -154,19 +155,31 @@ $$g(\point(0),q) = 0.$$
 
 Minimizing $\costf$ gives the best initial conditions, in the sense that Eq.~\eqref{eq-system} will produce fields as compatible as possible with the observations.
 
-Efficient and reliable methods for minimizing, such as the BFGS\todo{ref} algorithm, need the gradient of the functional with respect to the parameters. When $\Nphaz$ is large, approximating the gradient with finite differences become impractical. An powerful alternative to compute the gradient is to solve the adjoint equation\todo{ref}.
+Efficient and reliable minimization methods, such as the BFGS\todo{ref}
+method, need the gradient of the functional with respect to the parameters.
+When $\Nphaz$ is large, approximating the gradient with finite differences
+becomes impractical. A powerful alternative to computing the gradient is to
+solve the adjoint equation\todo{ref}.
 \subsection{Computing the gradient of the cost functional}
 
-Identifying the minimum of the $\costf$ relies on the gradient of the functional with respect to the parameters: $D_q\costf = \frac{D\,\costf}{Dq}$.
-For that, one can introduce the Lagrangian $\lag$, associated with the two lagrangian parameters $\lambda$ and $\mu$:
-\begin{equation} \lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\costff(\point,q,t) + \lambda^{\dagger}\fdyn(\point,\dot{\point},q,t) \bigg] dt + \mu^{\dagger} g(\point(0),q) 
+Identifying the minimum of the $\costf$ relies on the gradient of the
+functional with respect to the parameters:
+$D_q\costf = \frac{D\,\costf}{Dq}$. For that, one can introduce the
+Lagrangian $\lag$, associated with the two Lagrange parameters $\lambda$ and
+$\mu$:
+\begin{equation}
+  \lag\mypar{\point,\dot{\point},q,\lambda,\mu}
+  =
+  \int_0^T
+  \bigg[
+  \costff(\point,q,t) + \lambda^{\dagger}\fdyn(\point,\dot{\point},q,t)
+  \bigg] dt + \mu^{\dagger} g(\point(0),q) 
 \label{eq-lag}
 \end{equation}
 where $^{\dagger}$ is the transpose operator. Naturally, both $\point$ and $\dot{\point}$ are considered as variables.
 As $\fdyn$ and $g$ are null by construction, $\lambda$ and $\mu$ can be designed specifically to alleviate the computations.
-
-The gradiant $D_q\lag = \frac{D\lag}{Dq}$ of $\lag$ is:
-
+computations.
+The gradient $D_q\lag = \frac{D\lag}{Dq}$ of $\lag$ is
 \begin{equation}
 \begin{split}
 &D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\partial_{\point}\costff(\point,q,t)d_q \point  +\partial_{q} \costff(\point,q,t) + \\
@@ -233,7 +246,7 @@ The solution is discretized with $n_x$ points linearly spaced: $\hat{\point}\in 
 More information can be found in Sec.~\ref{an-burgers}
 
 
-\subsection{Shallow water quations}  \label{ssec-swe}
+\subsection{Shallow water equations}  \label{ssec-swe}
 \todo{We consider the \todo{SWE} equations (in its Ito form ?):
 \begin{equation}
 \begin{array}{lll}
@@ -256,9 +269,13 @@ Consider a stochastic dynamical system, in the Ito formalism, evolving on an $\N
 d \point\mypar{t} = \flot\mypar{\point\mypar{t}}dt + \gras{G}dW, \qquad \point \in \Ephaz,
 \label{eq-dyn}
 \end{equation}
-with $x$ the state of the system and $\flot:\Ephaz \rightarrow \Ephaz$ the flow operator. $dW$ is a an $\Nphaz$-dimensional Brownian motion (Wienner process) and $\gras{G}$ a diffusion $\Nphaz\times \Nphaz$ matrix.
-With a proper time scheme\footnote{Kloeden, P. E.,  Platen, E. (1999). Numerical solution of stochastic differential equations. Berlin:
-Springer,\\ Klauder Petersen scheme} associated with a time step $\delta t$, Eq.~\eqref{eq-dyn}  becomes:
+where $\point$ is the state of the system, $\flot:\Ephaz \rightarrow \Ephaz$
+is the flow operator, $dW$ is a an $\Nphaz$-dimensional Brownian motion
+(Wienner process), and $\gras{G}$ an $\Nphaz\times \Nphaz$ diffusion matrix.
+With a proper time scheme\footnote{Kloeden, P. E., Platen, E. (1999).
+  Numerical solution of stochastic differential equations. Berlin:
+  Springer,\\ Klauder Petersen scheme} associated with a time step
+$\delta t$, Eq.~\eqref{eq-dyn} becomes
 \begin{equation}
 \point\mypar{t_0+\mypar{n+1}\delta t} =  \fint\mypar{\point\mypar{t_0+n\delta t}}+\gras{G}\sqrt{\delta t} E,
 \label{eq-TM}
@@ -271,9 +288,12 @@ Let $h:\Ephaz \rightarrow \mathbb{R}^{\Nm}$ be a sensor function, so an observat
  \obs(t) = h\mypar{x,t} + \sqrt{\gras{S}}Y,
 \label{eq-obs}
 \end{equation}
-$Y$ is an $\Nm$-dimensional, standard-normal random variable, and $\sqrt{\gras{S}}$ a covariance matrix. 
-Let also consider, without any loss of generality, that $\gras{G} = g \gras{Id}$ and $\sqrt{\gras{S}} = \sqrt{s} \gras{Id}$.
-In the following, the time will be discretized accordingly to $\delta t$. For any variable $\star$, $ \star\mypar{t_0+n\delta t}$ will be shortened as $ \star_n$.
+where $Y$ is an $\Nm$-dimensional, standard-normal random variable and
+$\sqrt{\gras{S}}$ a covariance matrix. Let's also consider, without any loss
+of generality, that $\gras{G} = g \gras{Id}$ and
+$\sqrt{\gras{S}} = \sqrt{s} \gras{Id}$. In the following, the time will be
+discretized accordingly to $\delta t$. For any variable $\star$,
+$ \star\mypar{t_0+n\delta t}$ will be shortened as $ \star_n$.
 
 
 
@@ -283,7 +303,7 @@ In the following, the time will be discretized accordingly to $\delta t$. For an
 The fact that noises in Eqs.~\eqref{eq-TM} and \eqref{eq-obs} are Gaussian does not mean that the probability density function (pdf) associated with the state of the system is Gaussian, as it will be shown in the following.
 
 
-The probability that the $\Nphaz$-dimensional random variable $\rpoint^{n+1}$ coincide with a solution of the system described in Eq.~\eqref{eq-dyn}, at time $n+1$ and with the state $\point_{n}$ as initial condition, is given by:
+The probability that the $\Nphaz$-dimensional random variable $\rpoint^{n+1}$ coincide with a solution of the system described in Eq.~\eqref{eq-dyn}, at time $n+1$ and with the state $\point_{n}$ as initial condition, is given by
 $$P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} = P\mypar{\rpoint^{n+1}|\point_n}.$$ 
 This probability only depends on the system equations, \emph{i.e.} Eqs.~\eqref{eq-dyn} and \eqref{eq-TM}. When dealing with a Wiener process, the conditional probability is:
 \begin{equation}
@@ -292,15 +312,16 @@ P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} \propto \exp \mypar{- \norme{\rpoint
 \end{equation}
 Note that if the noise is not Gaussian (\emph{i.e.} not described by a Wiener process), it only affects the right side of Eq.~\eqref{eq-proba_int}.
 
-On an other hand, the probability that the observation of the variable $\rpoint^{n+1}$ is compatible with the observation of the system is given by:
+On an other hand, the probability that the observation of the variable $\rpoint^{n+1}$ is compatible with the observation of the system is given by
 $$P^{n+1}_{obs}\mypar{\rpoint^{n+1}} = P\mypar{h\mypar{\rpoint^{n+1}}|\obs_{n+1}}.$$ 
-Again, this probability only depends on the sensor function, see Eq.~\eqref{eq-obs}:
+Again, this probability only depends on the sensor function (see
+Eq.~\eqref{eq-obs}):
 \begin{equation}
  P^{n+1}_{obs}\mypar{\rpoint^{n+1}}  \propto \exp \mypar{- \norme{h\mypar{\rpoint^{n+1}} - y_{n+1}}^2/2s}.
 \label{eq-proba_obs}
 \end{equation}
 
-From the Bayes' theorem, by combining Eq.~\eqref{eq-proba_int} and Eq.~\eqref{eq-proba_obs}, the probability $P^{\point_n,n+1}_{SI}$ that $\rpoint^{n+1}$ is a possible outcome from the previous state $\point_n$, given the observation $\obs_{n+1}$, is:
+From the Bayes' theorem, by combining Eq.~\eqref{eq-proba_int} and Eq.~\eqref{eq-proba_obs}, the probability $P^{\point_n,n+1}_{SI}$ that $\rpoint^{n+1}$ is a possible outcome from the previous state $\point_n$, given the observation $\obs_{n+1}$, is
 \begin{equation}
 P^{\point_n,n+1}_{SI}\mypar{\rpoint^{n+1}} \propto P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} P^{n+1}_{obs}\mypar{\rpoint^{n+1}}
 \label{eq-bayes}
@@ -309,7 +330,7 @@ From this writing, as a product, the pdf of $P^{\point_n,n+1}_{SI}$ is not norma
 
 Generalization is straightforward. 
 Having several observations $\mya{\obs_{n+i}}_{\mya{i\in \mya{1,\hdots,r}}}$ available at hand, between time $t_n$ and $t_{n+r}$, is common. 
-Consequently,  Eq.~\eqref{eq-bayes} becomes:
+Consequently,  Eq.~\eqref{eq-bayes} becomes
 \begin{equation}
 P^{\point_n,n+r}_{SI}\mypar{\gras{\rpoint}_{n+1}^{n+r}} \propto \prod_{i=1}^r P^{\rpoint^{n+i-1},n+i}_{int}\mypar{\rpoint^{n+i}} \prod_{i\in \mya{1,\hdots,r}} P^{n_i}_{obs}\mypar{\rpoint^{n+i}},
 \label{eq-SI}
@@ -356,7 +377,7 @@ Importance sampling, \citep{Chorin2010,Morzfeld2012}, \todo{ref is} allows to ta
 The key is to consider an easy-to-sample pdf $p$. Some samples $\rpoint_i$ are drawn from it. These samples are mapped with the the actually hard-to-sample pdf $P$.
 It also provides a quantification of the importance of each sample with respect to the pdf, namely the weight of each particle, so the estimation of the moments are not biased.
 
-The weights of $\rpoint_i$ are:
+The weights of $\rpoint_i$ are
 \begin{equation}
 w\mypar{\rpoint_i} = \frac{P\mypar{\rpoint_i}}{p\mypar{\rpoint_i}}.
 \label{eq-weight}
@@ -365,9 +386,12 @@ w\mypar{\rpoint_i} = \frac{P\mypar{\rpoint_i}}{p\mypar{\rpoint_i}}.
 For being efficient, it is necessary that the maxima of $p$ and $P$ coincide. If not, some particles will be associated with low weights, and are hence of a low importance. Because of potential storage limitations and computational costs, such particles are to be avoided, and the objective is to identify particles with comparable weights.
 
 
-In order to construct a $p$ density, let consider $\xi$, an intermediate random variable. $\xi$ is drawn from a $\Nphaz$-dimensional Gaussian pdf.
-Such a variable is, of course, far from being a possible outcome of the physical system.
-It will be used as an intermediate for identifying a high probability sample $\rpoint$, solution of the algebraic equation, \cite{Morzfeld2012}:
+In order to construct a $p$ density, let consider $\xi$, an intermediate
+random variable. $\xi$ is drawn from a $\Nphaz$-dimensional Gaussian pdf.
+Such a variable is, of course, far from being a possible outcome of the
+physical system. It will be used as an intermediate for identifying a high
+probability sample $\rpoint$, solution of the algebraic equation,
+\cite{Morzfeld2012}:
 
 \begin{equation}
 F\mypar{\rpoint} - \Phi_F = \xi^t\xi/2,
@@ -378,11 +402,11 @@ where $\Phi_F = F\mypar{\chi}$ is the given minimum of $F$, identified for insta
 The sample $X$ has then an high probability to remains close to $\chi$, as $\xi$ is drawn for a $0$ mean pdf. 
 
 In order to identify the weight from Eq.~\eqref{eq-weight}, one has to compute the probability $p_{\rpoint}\mypar{\rpoint}$ of drawing $X$ from Eq.~\eqref{eq-alg}.
-By the substitution rule, $p_X$ is related to the probability $P_{\xi}\mypar{\xi}$ of drawing the sample $\xi$ by:
+By the substitution rule, $p_X$ is related to the probability $P_{\xi}\mypar{\xi}$ of drawing the sample $\xi$ by
 $$
 p_{\rpoint}\mypar{\rpoint} \left|\det \frac{\partial \rpoint}{\partial \xi}\right|  = P_{\xi}\mypar{\xi}.
 $$
-Consequently, with Eq.~\eqref{eq-weight}, the weight associated to the sample $\rpoint$ is:
+Consequently, with Eq.~\eqref{eq-weight}, the weight associated to the sample $\rpoint$ is
 \begin{equation}
 w\mypar{\rpoint} = \frac{P\mypar{\rpoint}}{P_{\xi}\mypar{\xi}/\left|\det \frac{\partial \rpoint}{\partial \xi}\right|}.
 \label{eq-weight_dev}
@@ -412,7 +436,7 @@ A BFGS-algorithm is then used for identifying the $\lambda$ minimizing Eq.~\eqre
 Computing the weight needs the evaluation of the jacobian of the maps between the reference sample $\rpoint$ and the random variable $\xi$.
 Following~\citep{Morzfeld2012}, let be $\rho = \sqrt{\xi^t \xi}$.
 
-Differentiating Eq.~\eqref{eq-ansatz} leads to:
+Differentiating Eq.~\eqref{eq-ansatz} leads to
 
 \begin{equation}
 \begin{array}{lll}
@@ -519,18 +543,22 @@ Three main parameters are allowed to variate: the noises in the model g, the noi
 \label{an-burgers}
 We recall here the expression from Eq.~\eqref{eq-fdyn_burgers}:
 $$ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0 $$
-The $i$th component of $\fdyn$ is then:
+The $i$th component of $\fdyn$ is then
 $$\fdyn_i\mypar{\point,\dot{\point},q,t} = \dot{\point_i} + \point_i \frac{\point_i - \point_{i-1}}{\Delta z} - \nu \frac{\point_{i+1} -2 \point_i + \point_{i-1}}{\Delta z ^2}. $$
-Consequently, the partial derivatives with respect to $\point$ are:
+Consequently, the partial derivatives with respect to $\point$ are
 $$\partial_{\point_j} \fdyn_i\mypar{\point,\dot{\point},q,t} = \frac{1}{\Delta z }\mypar{2 \point_i \delta_{i,j} - \delta_{i-1,j}} + \frac{1}{\Delta z ^2}\mypar{\delta_{i+1,j} - 2 \delta_{i,j} + \delta_{i+1,j}}.$$
-The partial derivative with respect to $\dot{\point}$ is:
+The partial derivative with respect to $\dot{\point}$ is
 $$\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = Id,$$
 and then $$dt\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = 0. $$
 
-The cost function is associated with:
+$$\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = Id,$$
+and then $$dt\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = 0. $$
+
+The cost function is associated with
 $$\costff\mypar{\point,q,t} = || \point-\obs(t)||^2.$$
-Hence, the partial derivatives with respect to $q$ and $\point$ are:
+Hence, the partial derivatives with respect to $q$ and $\point$ are
 $$\partial_q \costff\mypar{\point,q,t} = 0,$$
+and
 $$\partial_{\point} \costff\mypar{\point,q,t} = 2*\mypar{\point-\obs(t)}.$$
 
 The parameters $q$ are actually the initial conditions. Hence, $n_q$ is equal to $\Nphaz$. As a matter of fact, $g$ is:
