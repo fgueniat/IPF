@@ -1,7 +1,6 @@
-# IPF_lorenz
-IPF for lorenz
-More de com I guess
-
+# IPF
+IPF for Burgers
+Comparison with 4d-var
 
 Git hub repo.
 # IPF
