@@ -236,14 +236,16 @@ $\point$ evolves on an $\Nphaz$-dimensional manifold $\Ephaz$.
 We consider that it has been spatially discretized. The field $\point$ can hence be modelized by $\hat{\point}$ through a set of ordinary differential equations $ \fdyn(\hat{\point},\dot{\hat{\point}},q,t) =0.$
 $$ \dot{\hat{\point}} + L(\hat{\point},q,t) + NL(\hat{\point},q,t) = 0 \equiv \fdyn(\hat{\point},\dot{\hat{\point}},q,t), $$
 where $q\in \mathbb{R}^{q}$ are the parameters of the model.
-The solution is discretized with $n_x$ points linearly spaced: $\hat{\point}\in \mathcal{R}^{n_x}$, following an implicit scheme, in order to be solved by Newton iterations. The $\hat{\,}$ symbol is dropped in the following for the sake of readability.
-
+The solution is discretized with $n_x$ points linearly spaced: $\hat{\point}\in \mathcal{R}^{n_x}$, following an implicit scheme, in order to solve the time integration by Newton iterations. 
+The advection part is approached by a backward difference scheme.
+Acting as a regularization force, the viscosity actually makes this scheme stable, as no shock can occur in the considered working range. \todo{reformulate this sentence}.
+The dissipation part is approached by a central difference scheme.
+The $\hat{\,}$ symbol is dropped in the following for the sake of readability:
 \begin{equation}
- \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0 
+ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0.
 \label{eq-fdyn_burgers}
 \end{equation}
-
-More information can be found in Sec.~\ref{an-burgers}
+More information about the partial derivatives needed for solving the adjoint equation can be found in Sec.~\ref{an-burgers}.
 
 
 \subsection{Shallow water equations}  \label{ssec-swe}
@@ -524,7 +526,7 @@ Three main parameters are allowed to variate: the noises in the model g, the noi
 
 \begin{table}[h!]
 \caption{
-Comparison of mean errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF.
+Comparison of mean errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$, on $100$ runs, on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF. $\Ns=20$ spatial points were used for the spatial discretization, and $\Nsnap = 3$ snapshots are considered.
 }
 \begin{centering}
 \begin{tabular}{c|ll|ll|ll}
@@ -534,7 +536,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $7.6\times 10^{-3}$ & $3.2\times 10^{-5}$ & $7.6\times 10^{-3}$ & $1.0\times 10^{-3}$ & $4.8\times 10^{-2}$ & $4.6\times 10^{-2}$ \\ 
 $g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $ 2.1\times 10^{-2}$ & $5.9\times 10^{-6}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-mean_errors_burgers}
 \end{centering}
@@ -542,7 +544,7 @@ $ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 
 
 \begin{table}[h!]
 \caption{
-Comparison of deviation of errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF.
+Comparison of deviation of errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$, on $100$ runs, on the identification of the initial conditions $\point_0$, when $\hat{\point}_0$ is identified with 4D-Var and IPF. $\Ns=20$ spatial points were used for the spatial discretization, and $\Nsnap = 3$ snapshots are considered.
 }
 \begin{centering}
 \begin{tabular}{c|ll|ll|ll}
@@ -552,7 +554,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $8.6\times 10^{-4}$ & $5.5\times 10^{-6}$ & $9.0\times 10^{-4}$ & $1.6\times 10^{-4}$ & $7.7\times 10^{-3}$ & $7.1\times 10^{-3}$ \\ 
 $g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $9.3\times 10^{-2}$ & $1.4\times 10^{-5}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-std_errors_burgers}
 \end{centering}
@@ -581,7 +583,9 @@ $ g=      1.0\times 10^{-2}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 
 \label{an-burgers}
 We recall here the expression from Eq.~\eqref{eq-fdyn_burgers}:
 $$ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0 $$
-The $i$th component of $\fdyn$ is then
+The route "discretization then adjoint" is hence followed.
+
+As a matter of fact, the $i$th component of $\fdyn$ is:
 $$\fdyn_i\mypar{\point,\dot{\point},q,t} = \dot{\point_i} + \point_i \frac{\point_i - \point_{i-1}}{\Delta z} - \nu \frac{\point_{i+1} -2 \point_i + \point_{i-1}}{\Delta z ^2}. $$
 Consequently, the partial derivatives with respect to $\point$ are
 $$\partial_{\point_j} \fdyn_i\mypar{\point,\dot{\point},q,t} = \frac{1}{\Delta z }\mypar{2 \point_i \delta_{i,j} - \delta_{i-1,j}} + \frac{1}{\Delta z ^2}\mypar{\delta_{i+1,j} - 2 \delta_{i,j} + \delta_{i+1,j}}.$$
