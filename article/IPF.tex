@@ -1,5 +1,5 @@
-\documentclass[aip,pof,nofootinbib,reprint,onecolumn]{revtex4-1}
-%\documentclass[11pt,openany,onecolumn,a4wide,pof]{article}
+%\documentclass[aip,pof,nofootinbib,reprint,onecolumn]{revtex4-1}
+\documentclass[11pt,openany,onecolumn,a4wide,pof]{article}
 
 \usepackage{amssymb,amsbsy,amsmath}
 
@@ -66,29 +66,29 @@
 \title{Note on implicit filters}
 
 
-%\homepage{http://www.gueniat.fr}
-%\email{florimond.gueniat@limsi.fr}
-\author{Florimond Gu\'eniat}
-\affiliation{Department of mathematics, Florida State Univ., 32306-4510 Tallahassee, Fl, US}
-\author{Lionel Mathelin}
-\affiliation{LIMSI-CNRS, 91403 Orsay cedex, France}
-%\author{Omid Khanmohamadi}
+%%\homepage{http://www.gueniat.fr}
+%%\email{florimond.gueniat@limsi.fr}
+%\author{Florimond Gu\'eniat}
 %\affiliation{Department of mathematics, Florida State Univ., 32306-4510 Tallahassee, Fl, US}
-\author{Yussuf Hussaini}
-\affiliation{Department of mathematics, Florida State Univ., 32306-4510 Tallahassee, Fl, US}
-
-
-
-\date{\today}
-
-
-
-\keywords{Data assimilation, Model identification}
-
-\begin{abstract}
-
-
-\end{abstract}
+%\author{Lionel Mathelin}
+%\affiliation{LIMSI-CNRS, 91403 Orsay cedex, France}
+%%\author{Omid Khanmohamadi}
+%%\affiliation{Department of mathematics, Florida State Univ., 32306-4510 Tallahassee, Fl, US}
+%\author{Yussuf Hussaini}
+%\affiliation{Department of mathematics, Florida State Univ., 32306-4510 Tallahassee, Fl, US}
+%
+%
+%
+%\date{\today}
+%
+%
+%
+%\keywords{Data assimilation, Model identification}
+%
+%\begin{abstract}
+%
+%
+%\end{abstract}
 
 %\keywords{Dynamic Mode Decomposition, Compressed Sensing, Shannon-Nyquist criterion, large dataset, K-means}
 
@@ -119,7 +119,7 @@ The sensitivity analysis cannot be considered as accurate, as soon as the noise 
 Moreover, results are actually biased if the posterior pdf is multimodal, \cite{Rabier1992}.
 
 Indeed, IPF have been successfully used for data assimilation, \cite{Chorin2010}, system identification, \cite{Morzfeld2012}, and parameter estimation. 
-It is particularly relevant for multimodal pdf ; it provides an unbiased estimate of the solutions, \citep{Atkins2013}.
+It is particularly relevant for multimodal pdf ; it provides an unbiased estimate of the solutions, \cite{Atkins2013}.
 As for Markov-Chain Monte Carlo method, IPF relies on a set of particles for the quantification of the conditional pdf of the system.
 The main difference lies in the fact that only a few, weighted hence carefully chosen particles are considered.  
 Identifying these particles is done through the maximisation of a tailor-constructed probability.
@@ -375,7 +375,7 @@ Intuitively, a particle carries more information on the probability, as soon as 
 Moreover, estimations of the pdf properties rely on drawing samples from the pdf. 
 A sample has to be a possible outcome of the physical system described by Eq.~\eqref{eq-dyn} for being meaningful.
 
-Importance sampling, \citep{Chorin2010,Morzfeld2012}, \todo{ref is} allows to tackle both these issues.
+Importance sampling, \cite{Chorin2010,Morzfeld2012}, \todo{ref is} allows to tackle both these issues.
 The key is to consider an easy-to-sample pdf $p$. Some samples $\rpoint_i$ are drawn from it. These samples are mapped with the the actually hard-to-sample pdf $P$.
 It also provides a quantification of the importance of each sample with respect to the pdf, namely the weight of each particle, so the estimation of the moments are not biased.
 
@@ -431,12 +431,12 @@ Solving Eq.~\eqref{eq-alg} is a necessary step. For that, Morzfeld \emph{et al.}
 \label{eq-ansatz}
 \end{equation}
 where $\lambda$ is a real parameter, and $L^t$ is the Choleski decomposition of $H^{-1}$, $H$ being the Hessian of $F$, evaluated in $\chi$.
-It minimizes the dispersion of the jacobian $\left|\det \frac{\partial \rpoint}{\partial \xi}\right|$ when considering different particles, and hence the dispersion of weights,~\citep{Morzfeld2012}.
+It minimizes the dispersion of the jacobian $\left|\det \frac{\partial \rpoint}{\partial \xi}\right|$ when considering different particles, and hence the dispersion of weights,~\cite{Morzfeld2012}.
 
 A BFGS-algorithm is then used for identifying the $\lambda$ minimizing Eq.~\eqref{eq-alg}.
 
 Computing the weight needs the evaluation of the jacobian of the maps between the reference sample $\rpoint$ and the random variable $\xi$.
-Following~\citep{Morzfeld2012}, let be $\rho = \sqrt{\xi^t \xi}$.
+Following~\cite{Morzfeld2012}, let be $\rho = \sqrt{\xi^t \xi}$.
 
 Differentiating Eq.~\eqref{eq-ansatz} leads to
 
