@@ -1,8 +1,8 @@
 %\documentclass[aip,pof,nofootinbib,reprint,onecolumn]{revtex4-1}
-\documentclass[11pt,openany,onecolumn,a4wide,pof]{article}
+\documentclass[10pt,openany,onecolumn,a4wide,pof]{article}
 
 \usepackage{amssymb,amsbsy,amsmath}
-
+\usepackage[margin=1.0in]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage{xcolor}
 \usepackage{graphicx,subfigure}
@@ -65,7 +65,7 @@
 
 \title{Note on implicit filters}
 
-
+\author{Florimond Guéniat, Lionel Mathelin, Yussuf M. Hussaini}
 %%\homepage{http://www.gueniat.fr}
 %%\email{florimond.gueniat@limsi.fr}
 %\author{Florimond Gu\'eniat}
@@ -192,7 +192,12 @@ As a matter of facts, $D_q\lag = D_q \costf$.
 
 The term in $d_{\dot{\point}}$ cannot be easily estimated. An integration by parts gives:
 
-$$\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt$$
+\begin{equation*}
+\begin{split}
+&\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = \\
+&\qquad [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt
+\end{split}
+\end{equation*}
 The term associated with $d_{\dot{\point}}$ can now be replaced in Eq.~\eqref{eq-deriv_lag}.
 Ordering terms in this equation leads to:
 
@@ -246,6 +251,12 @@ The $\hat{\,}$ symbol is dropped in the following for the sake of readability:
 \label{eq-fdyn_burgers}
 \end{equation}
 More information about the partial derivatives needed for solving the adjoint equation can be found in Sec.~\ref{an-burgers}.
+\begin{figure}[t]
+\center
+\includegraphics[height=.35\linewidth]{./burgers.eps}
+\caption{\small Illustration of the Burgers' system.}
+\label{fig-rmap}
+\end{figure}
 
 
 \subsection{Shallow water equations}  \label{ssec-swe}
@@ -260,6 +271,13 @@ More information about the partial derivatives needed for solving the adjoint eq
 \end{equation} 
 \todo{Ito ?} 0where $u$ and $v$ are the surface velocity, $h$ (resp. $H$) is the deviation of height (resp. mean height) from the botton. $f$ is the Coriolis coefficient and $\nu$ is the viscous drag coefficient. $g$ is the acceleration due to gravity.
 This equation is spatially discretized.}
+
+\begin{figure}[t]
+\center
+\includegraphics[height=.35\linewidth]{./SWE.eps}
+\caption{\small Illustration of the initial conditions of the Shallow Water system.}
+\label{fig-rmap}
+\end{figure}
 
 
 %\input{tex_files/IPF_algo}
@@ -522,6 +540,21 @@ The objective is the identification of the initial conditions, knowing only some
 The accuracy and the computational costs are estimated. 
 Three main parameters are allowed to variate: the noises in the model g, the noises in the observations s, and finally the dimensions (spatial ? temp?).
 
+\begin{figure}[h]
+\center
+\subfigure[]{
+\includegraphics[width=.28\linewidth]{./burgers_local_comp.eps}
+\label{sfig-trans}
+}
+\subfigure[]{
+\includegraphics[width=.28\linewidth]{./burgers_local_comp_err.eps}
+\label{sfig-rew}
+}
+\vspace{-1em}
+\caption{\small (a): In black: Initial conditions. In red: approximation of the initial conditions with IPF. In Blue: approximation of the initial conditions with 4DVAR. (b): In red: errors to the initial conditions with IPF. In Blue: errors to the initial conditions with 4DVAR.}
+\label{fig-err}
+\end{figure}
+
 \subsubsection{accuracy}
 
 \begin{table}[h!]
@@ -535,7 +568,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
   & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} \\ 
 \hline 
 $ g=      1.0\times 10^{-5}$ & $7.6\times 10^{-3}$ & $3.2\times 10^{-5}$ & $7.6\times 10^{-3}$ & $1.0\times 10^{-3}$ & $4.8\times 10^{-2}$ & $4.6\times 10^{-2}$ \\ 
-$g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$g=      3.2\times 10^{-4} $ & $7.6\times 10^{-3}$ & $4.0\times 10^{-5}$ & $7.7\times 10^{-3}$ & $1.7\times 10^{-3}$ & $4.7\times 10^{-2}$ & $3.1\times 10^{-2}$ \\ 
 $ g=      1.0\times 10^{-2}$ & $ 2.1\times 10^{-2}$ & $5.9\times 10^{-6}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-mean_errors_burgers}
@@ -553,7 +586,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
   & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} & {\scriptsize 4D-Var} & {\scriptsize IPF} \\ 
 \hline 
 $ g=      1.0\times 10^{-5}$ & $8.6\times 10^{-4}$ & $5.5\times 10^{-6}$ & $9.0\times 10^{-4}$ & $1.6\times 10^{-4}$ & $7.7\times 10^{-3}$ & $7.1\times 10^{-3}$ \\ 
-$g=      3.2\times 10^{-4} $ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$g=      3.2\times 10^{-4} $ & $8.4\times 10^{-4}$ & $6.2\times 10^{-6}$ & $1.0\times 10^{-3}$ & $1.7\times 10^{-4}$ & $8.6\times 10^{-3}$ & $4.9\times 10^{-3}$ \\ 
 $ g=      1.0\times 10^{-2}$ & $9.3\times 10^{-2}$ & $1.4\times 10^{-5}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-std_errors_burgers}
