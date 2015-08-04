@@ -555,6 +555,37 @@ Three main parameters are allowed to variate: the noises in the model g, the noi
 \label{fig-err}
 \end{figure}
 
+\begin{figure}[h]
+\center
+\subfigure[]{
+\includegraphics[width=.38\linewidth]{./err_4dvar.eps}
+\label{sfig-err_4dvar}
+}
+\subfigure[]{
+\includegraphics[width=.38\linewidth]{./err_ipf.eps}
+\label{sfig-err_ipf}
+}
+\vspace{-1em}
+\caption{\small Comparison of mean errors $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ (a): approximation of the initial conditions with 4DVAR. (b): approximation of the initial conditions with IPF.}
+\label{fig-err}
+\end{figure}
+
+\begin{figure}[h]
+\center
+\subfigure[]{
+\includegraphics[width=.38\linewidth]{./std_4dvar.eps}
+\label{sfig-std_4dvar}
+}
+\subfigure[]{
+\includegraphics[width=.38\linewidth]{./std_ipf.eps}
+\label{sfig-std_ipf}
+}
+\vspace{-1em}
+\caption{\small Comparison of std of $\error = \norme{\hat{\point}_0-\point_0}/\norme{\point_0}$ (a): approximation of the initial conditions with 4DVAR. (b): approximation of the initial conditions with IPF.}
+\label{fig-std}
+\end{figure}
+
+
 \subsubsection{accuracy}
 The uncertainties are, firstly, chosen to be uncorrelated Gaussian components. $\Ns=20$ spatial points were used for the spatial discretization, and $\Nsnap = 3$ snapshots are considered. 
 Interestingly, noises in the model have a very low impact on the IPF results, compare to noises in the measurements.
@@ -571,7 +602,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $7.6\times 10^{-3}$ & $3.2\times 10^{-5}$ & $7.6\times 10^{-3}$ & $1.0\times 10^{-3}$ & $4.8\times 10^{-2}$ & $4.6\times 10^{-2}$ \\ 
 $g=      3.2\times 10^{-4} $ & $7.6\times 10^{-3}$ & $4.0\times 10^{-5}$ & $7.7\times 10^{-3}$ & $1.7\times 10^{-3}$ & $4.7\times 10^{-2}$ & $3.1\times 10^{-2}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $ 5.0\times 10^{-2}$ & $9.4\times 10^{-5}$ & $4.0\times 10^{-2}$ & $1.2\times 10^{-3}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $ 5.0\times 10^{-2}$ & $9.4\times 10^{-5}$ & $4.0\times 10^{-2}$ & $1.2\times 10^{-3}$ & $8.9\times 10^{-2}$ & $3.0\times 10^{-2}$ \\ 
 \end{tabular}
 \label{tab-mean_errors_burgers}
 \end{centering}
@@ -589,7 +620,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $8.6\times 10^{-4}$ & $5.5\times 10^{-6}$ & $9.0\times 10^{-4}$ & $1.6\times 10^{-4}$ & $7.7\times 10^{-3}$ & $7.1\times 10^{-3}$ \\ 
 $g=      3.2\times 10^{-4} $ & $8.4\times 10^{-4}$ & $6.2\times 10^{-6}$ & $1.0\times 10^{-3}$ & $1.7\times 10^{-4}$ & $8.6\times 10^{-3}$ & $4.9\times 10^{-3}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $1.0\times 10^{-1}$ & $1.5\times 10^{-5}$ & $7.5\times 10^{-2}$ & $2.0\times 10^{-4}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $1.0\times 10^{-1}$ & $1.5\times 10^{-5}$ & $7.5\times 10^{-2}$ & $2.0\times 10^{-4}$ & $1.3\times 10^{-1}$ & $4.8\times 10^{-3}$ \\ 
 \end{tabular}
 \label{tab-std_errors_burgers}
 \end{centering}

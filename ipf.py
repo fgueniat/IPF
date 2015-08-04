@@ -52,6 +52,66 @@ def Functionnal_IPF(p,param):
 		F += param.imp_obs[i]*P_obs(h,X[:,i],param.obs[:,i],param)
 	return F
 
+def Jacob_Functionnal_IPF(p,param):
+# Jacob of Functional to minimize
+	F = np.zeros(param.nx,param*nt)
+	h = Observable_intermediary
+	f = F_intermediary
+	nt = param.nt
+	X = p.reshape(param.nx,param.nt)
+	for i in range(nt-1): #DA: t=0 included
+		#J = 2*(df/dxn+1 + df/dx) * (GG^T)-1 * f
+		F[:,i] = 2.0 * JF_int(X[:,i]) * param.GG * F_int(f,X[:,i],X[:,i+1],param)
+		F[:,i] += 2.0 * JF_obs(X) * param.SS * F_obs(h,X[:,i],param.obs[:,i],param)
+	F = F.flatten()
+
+	return -1.0 * F
+
+def F_int(f,X,Xp1,param):
+#Xnp1-f(Xn)
+	if np.abs(g) < 1.0e-12:
+		g=1.0
+	dt = param.dt
+	F = Xp1 - X - dt * f(X,param)
+#	print(P)
+	return F
+
+
+def JF_int(X,param):
+# D(Xnp1-f(Xn))
+	if np.abs(g) < 1.0e-12:
+		g=1.0
+	dt = param.dt
+	dx = param.dx
+	nu = param.nu
+	xm1 = np.append(X[-1],X[0:-1])
+	JF = np.diag(2.0*X - xm1)/dx -  nu*( np+diag(np.ones(X.size-1),1) - 2.0*np.diag(np.ones(X.size) + np.diag(np.ones(X.size-1),-1))  /(dx*dx)  
+	JF[0,-1] = -nu/(dx * dx)
+	JF[-1,0] = -nu/(dx * dx)
+	JF = np.zeros((X.size,X.size))
+#	JF += np.eye(Xp1.size) - np.eye(X.size) - dt * JF
+	JF = - dt * JF
+#	print(P)1
+	return JF
+
+def F_obs(h,X,y,param):
+	if np.abs(g) < 1.0e-12:
+		g=1.0
+	dt = param.dt
+	F = h(X,param) - y
+#	print(P)
+	return F
+
+
+def JF_obs(X):
+	JF = np.eye(X.size)
+#	print(P)1
+	return JF
+def Hessian_IPF(p,param):
+	H = np.zeros(2)
+	print('approx with Jacob ?')
+	pass
+	
 def Ersatz(l,param):
 # Ersatz for solving the algebraic equation
 	X = param.xmin + l*param.Lnu

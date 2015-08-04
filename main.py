@@ -13,9 +13,9 @@ class Parameters():
 	def __init__(self,dx,dt,nx,nt,nu,psize = 0, obs=False,g=0,s=0,imp_int = False,imp_obs = False,eps = np.eye(2),fmin = 0, hessianm1 = np.eye(2),xmin = np.ones(2)):
 		self.dx = dx
 		self.dt = dt
-		self.nu = nu
 		self.nx = nx
 		self.nt = nt
+		self.m = 10
 		self.obs = obs
 		self.psize = psize
 		self.g = g
@@ -49,11 +49,13 @@ class Parameters():
 			print("gen cholesky")
 			self.L = gen_cholesky(self.hessianm1)
 
+	def GG(m):
+		
 
 if __name__ == '__main__':
 	print "This only executes when %s is executed rather than imported" % __file__
 	
-	ntest = 1
+	ntest = 10
 	ng = 1
 	ns = 1
 	err_da = np.zeros((ntest,2))
@@ -67,7 +69,7 @@ if __name__ == '__main__':
 				print(s)
 
 				print("Definition of parameters")
-				nx = 20
+				nx = 50
 				nu = 0.0001
 				xl = 0.0
 				xr = 1.0

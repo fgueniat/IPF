@@ -121,6 +121,8 @@ def DFDU(u,param):
 	dfdu[-1,0] = - nu / (dx*dx)
 	return dfdu
 
-
+def Grad_dyn(X,param):
+	
+	pass
 
 
