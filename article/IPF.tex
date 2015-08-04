@@ -349,7 +349,7 @@ P^{\point_n,n+1}_{SI}\mypar{\rpoint^{n+1}} \propto P^{\point_n,n+1}_{int}\mypar{
 From this writing, as a product, the pdf of $P^{\point_n,n+1}_{SI}$ is not normal.
 
 Generalization is straightforward. 
-Having several observations $\mya{\obs_{n+i}}_{\mya{i\in \mya{1,\hdots,r}}}$ available at hand, between time $t_n$ and $t_{n+r}$, is common. 
+Having several observations $\mya{\obs_{n+i}}_{\mya{i\in \mya{0,\hdots,r}}}$ available at hand, between time $t_n$ and $t_{n+r}$, is common. 
 Consequently,  Eq.~\eqref{eq-bayes} becomes
 \begin{equation}
 P^{\point_n,n+r}_{SI}\mypar{\gras{\rpoint}_{n+1}^{n+r}} \propto \prod_{i=1}^r P^{\rpoint^{n+i-1},n+i}_{int}\mypar{\rpoint^{n+i}} \prod_{i\in \mya{1,\hdots,r}} P^{n_i}_{obs}\mypar{\rpoint^{n+i}},
@@ -359,7 +359,7 @@ where $\gras{\rpoint}_{n+1}^{n+r} = \mya{\rpoint^{n+1}, \hdots,\rpoint^{n+r}}$ i
 
 The probability $P^{n}_{DA}$ that the system is in a given state $\rpoint^n$ at the given time $n$ can be derived from Eq.~\eqref{eq-SI}:
 \begin{equation}
-P^{n}_{DA}\mypar{\gras{\rpoint}_{n}^{n+r}} \propto \prod_{i=1}^r P^{\rpoint^{n+i-1},n+i}_{int}\mypar{\rpoint^{n+i}} \prod_{i\in \mya{1,\hdots,r}} P^{n_i}_{obs}\mypar{\rpoint^{n+i}},
+P^{n}_{DA}\mypar{\gras{\rpoint}_{n}^{n+r}} \propto \prod_{i=1}^r P^{\rpoint^{n+i-1},n+i}_{int}\mypar{\rpoint^{n+i}} \prod_{i\in \mya{0,\hdots,r}} P^{n_i}_{obs}\mypar{\rpoint^{n+i}},
 \label{eq-DA}
 \end{equation}
 with $\gras{\rpoint}_{n+1}^{n+r} = \mya{\rpoint^{n}, \hdots,\rpoint^{n+r}}$.
@@ -556,6 +556,8 @@ Three main parameters are allowed to variate: the noises in the model g, the noi
 \end{figure}
 
 \subsubsection{accuracy}
+The uncertainties are, firstly, chosen to be uncorrelated Gaussian components. $\Ns=20$ spatial points were used for the spatial discretization, and $\Nsnap = 3$ snapshots are considered. 
+Interestingly, noises in the model have a very low impact on the IPF results, compare to noises in the measurements.
 
 \begin{table}[h!]
 \caption{
@@ -569,7 +571,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $7.6\times 10^{-3}$ & $3.2\times 10^{-5}$ & $7.6\times 10^{-3}$ & $1.0\times 10^{-3}$ & $4.8\times 10^{-2}$ & $4.6\times 10^{-2}$ \\ 
 $g=      3.2\times 10^{-4} $ & $7.6\times 10^{-3}$ & $4.0\times 10^{-5}$ & $7.7\times 10^{-3}$ & $1.7\times 10^{-3}$ & $4.7\times 10^{-2}$ & $3.1\times 10^{-2}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $ 2.1\times 10^{-2}$ & $5.9\times 10^{-6}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $ 5.0\times 10^{-2}$ & $9.4\times 10^{-5}$ & $4.0\times 10^{-2}$ & $1.2\times 10^{-3}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-mean_errors_burgers}
 \end{centering}
@@ -587,7 +589,7 @@ $s$  & \multicolumn{2}{|c}{ $ 1.0\times 10^{-5} $ } & \multicolumn{2}{|c}{ $ 3.2
 \hline 
 $ g=      1.0\times 10^{-5}$ & $8.6\times 10^{-4}$ & $5.5\times 10^{-6}$ & $9.0\times 10^{-4}$ & $1.6\times 10^{-4}$ & $7.7\times 10^{-3}$ & $7.1\times 10^{-3}$ \\ 
 $g=      3.2\times 10^{-4} $ & $8.4\times 10^{-4}$ & $6.2\times 10^{-6}$ & $1.0\times 10^{-3}$ & $1.7\times 10^{-4}$ & $8.6\times 10^{-3}$ & $4.9\times 10^{-3}$ \\ 
-$ g=      1.0\times 10^{-2}$ & $9.3\times 10^{-2}$ & $1.4\times 10^{-5}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
+$ g=      1.0\times 10^{-2}$ & $1.0\times 10^{-1}$ & $1.5\times 10^{-5}$ & $7.5\times 10^{-2}$ & $2.0\times 10^{-4}$ & $?\times 10^{-?}$ & $?\times 10^{-?}$ \\ 
 \end{tabular}
 \label{tab-std_errors_burgers}
 \end{centering}
