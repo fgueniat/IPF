@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import fmin_bfgs
+from scipy.optimize import minimize
 from scipy.optimize import fmin_l_bfgs_b
 
 import plot_tools as pt
@@ -19,7 +20,14 @@ class Parameters():
 		self.obs = obs
 		self.psize = psize
 		self.g = g
+		self.is_g = 1.0
+		self.G = self.g*np.sqrt(self.dt) * np.eye(self.nx)
+		self.Gm1 = np.linalg.inv(  np.dot(self.G,self.G.T)  )
 		self.s = s
+		self.is_s = 1.0
+		self.S = self.s * np.eye(self.nx)
+		self.Sm1 = np.linalg.inv(  np.dot(self.S,self.S.T)  )
+		self.nu = nu
 		self.fmin = fmin
 		self.xmin = xmin
 		if imp_int is False:
@@ -49,15 +57,17 @@ class Parameters():
 			print("gen cholesky")
 			self.L = gen_cholesky(self.hessianm1)
 
-	def GG(m):
-		
+	def GG(self,g):
+		self.GG = np.linalg.pinv(  np.dot(g,g.T)  )
+	def SS(self,s):
+		self.SS = np.linalg.pinv(  np.dot(s,s.T)  )
 
 if __name__ == '__main__':
 	print "This only executes when %s is executed rather than imported" % __file__
 	
 	ntest = 10
-	ng = 1
-	ns = 1
+	ng = 2
+	ns = 2
 	err_da = np.zeros((ntest,2))
 	err_f = np.zeros((ntest,2))
 	lg = np.logspace(-5,-2,ns)
@@ -81,6 +91,8 @@ if __name__ == '__main__':
 				s = ls[i_s]
 				T = dt*nt
 				param = Parameters(dx,dt,nx,nt,nu,nx,[],g,s)
+				param.GG(g*np.sqrt(dt)*np.eye(nx))
+				param.SS(s*np.eye(nx))
 
 				print("            ***               ")
 				print("            ***               ")
@@ -150,30 +162,74 @@ if __name__ == '__main__':
 				#		Plot(unp1,un)
 					Usmart[:,i] = unp1
 
-				print("            ***               ")
-				print("Minimisation with weigths on first times")
-			#	p02 = U.flatten() + .01*np.random.normal(0,1,U.size)
-				p02 = Usmart.flatten()
-				ic_smart = fmin_l_bfgs_b(Functionnal_IPF,p02,None,(param,),approx_grad=True ,iprint=0,factr = 0.0)
-				param.imp_int = np.ones(nt)
-				param.imp_obs = np.ones(nt)
-
+#				print("            ***               ")
+#				print("Minimisation with weigths on first times")
+#			#	p02 = U.flatten() + .01*np.random.normal(0,1,U.size)
+				p02 = np.zeros(Usmart.size)
+#				ic_smart = fmin_l_bfgs_b(Functionnal_IPF,p02,None,(param,),approx_grad=True ,iprint=0,factr = 0.0)
+#				ic_smart = ic_smart[0]
+#				param.imp_int = np.ones(nt)
+#				param.imp_obs = np.ones(nt)
+				
+				ic_smart = p02
 				print("            ***               ")
 				print("Regular Minimisation")
 			#	ic_opt2 = fmin_l_bfgs_b(Functionnal_IPF,ic_smart[0],None,(param,),approx_grad=True ,iprint=1,factr = 0.0)
-				res = fmin_bfgs(Functionnal_IPF,ic_smart[0],None,(param,),full_output = 1, disp = 0)
+				res = fmin_bfgs(Functionnal_IPF,ic_smart,Jacob_Functionnal_IPF,(param,),full_output = 1, disp = 1,gtol=1.0e-12)
+#				res = minimize(Functionnal_IPF,ic_smart,method='BFGS', jac=Jacob_Functionnal_IPF,args = (param,))
 				ic_opt_IPF = res[0]
 				param.fmin = res[1]
 				param.xmin = ic_opt_IPF
+
+
+				paramdraw = pt.Paradraw()
+#				paramdraw.title = 'dj'
+#				dj = Jacob_Functionnal_IPF(p02,param)
+#				dj = dj.reshape(nx,nt)
+#				pt.plot1(dj[:,0],paramdraw)
+#				
+#				paramdraw.title ='min'
+#				r = res['x']
+#				r = r.reshape(nx,nt)
+#				pt.plot1(r[:,0],paramdraw)
+#				paramdraw.title = 'condinit'
+#				p = p02
+#				p = p.reshape(nx,nt)
+#				pt.plot1(p[:,0],paramdraw)
+#				paramdraw.title = 'u0'
+#				pt.plot1(u0,paramdraw)
+#				paramdraw.title = 'djend'
+#				dj = Jacob_Functionnal_IPF(r.flatten(),param)
+#				dj = dj.reshape(nx,nt)
+#				pt.plot1(dj[:,0],paramdraw)
+
+
 				print("            ***               ")
 				print("Hessian")
-				hesstype = "approx"
+				hesstype = "bfgs"
 				if hesstype == "bfgs":
 					hess = res[3]
-				else:
+				elif hesstype == "diff":
 					hess = Hessianm1(ic_opt_IPF,param,0.01)
+				elif hesstype == "grad":
+#					hess = Hess_gradiant(ic_opt_IPF,param)
+					hess,dX,Y = Hess_gradiant(ic_opt_IPF,param)
 
 				param.Set_hess(hess)
+				print(np.linalg.slogdet(param.L)[1])
+
+#				truc
+
+
+
+
+
+
+
+
+
+
+
 
 				ic_opt_IPF = ic_opt_IPF.reshape(param.nx,param.nt)
 			#	Plot(u0,ic_opt_IPF[:,0])
@@ -219,7 +275,7 @@ if __name__ == '__main__':
 
 				s = "diff u0 u4dvar: " + str(np.linalg.norm(u0 - ic_4DVAR)/np.linalg.norm(u0)) + " & diff u0 IPF: " + str(np.linalg.norm(u0 - u0_IPF)/np.linalg.norm(u0))
 				print(s)
-				s = "diff u0 u4dvar: " + str(np.linalg.norm(U[:,-1] - U4dvar[:,-1])/np.linalg.norm(u0)) + " & diff u0 IPF: " + str(np.linalg.norm(U[:,-1] - uf_IPF)/np.linalg.norm(u0))
+				s = "diff uf u4dvar: " + str(np.linalg.norm(U[:,-1] - U4dvar[:,-1])/np.linalg.norm(u0)) + " & diff uf IPF: " + str(np.linalg.norm(U[:,-1] - uf_IPF)/np.linalg.norm(u0))
 				print(s)
 				err_da[itest,0] =  np.linalg.norm(u0 - ic_4DVAR)/np.linalg.norm(u0)
 				err_da[itest,1] =  np.linalg.norm(u0 - u0_IPF)/np.linalg.norm(u0)
@@ -228,14 +284,14 @@ if __name__ == '__main__':
 				err_f[itest,1] =  np.linalg.norm(U[:,-1] - uf_IPF)/np.linalg.norm(u0)
 				pt.multiplot1(False,(u0,ic_4DVAR))
 				pt.multiplot1(False,(u0,u0_IPF))
-
-#				s = '../' + 'loop_nx_' + str(nx) + '_g_' + str(ig) + '_s_' + str(i_s) + '.dat'
-#				data = (u0, U , param ,err_da ,err_f , u0_IPF, ic_4DVAR )
-#				PIK = s
-#				with open(PIK, "wb") as f:
-#					pk.dump(len(data), f)
-#					for value in data:
-#						pk.dump(value, f)
+				truc
+				s = '../' + 'loop_nx_' + str(nx) + '_g_' + str(ig) + '_s_' + str(i_s) + '.dat'
+				data = (u0, U , param ,err_da ,err_f , u0_IPF, ic_4DVAR )
+				PIK = s
+				with open(PIK, "wb") as f:
+					pk.dump(len(data), f)
+					for value in data:
+						pk.dump(value, f)
 				#load:
 #				data2 = []
 #				with open(PIK, "rb") as f:

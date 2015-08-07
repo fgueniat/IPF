@@ -1,5 +1,11 @@
 import numpy as np
 
+def mdot(ABC):
+	A = ABC[0]
+	for i in range(1,len(ABC)):
+		A = np.dot(A,ABC[i])
+	return A
+
 def gen_cholesky(H, eps_machine=1.0e-15, print_prefix=0, print_flag=0): 
 #The Gill, Murray, and Wright modified Cholesky algorithm, from Practical Optimization, Academic Press, London, 1981
  
@@ -9,7 +15,7 @@ def gen_cholesky(H, eps_machine=1.0e-15, print_prefix=0, print_flag=0):
 	gamma = 0.0 
 	xi = 0.0 
 	for i in range(ndim): 
-		gamma = np.max(np.abs(H[i, i]), gamma) 
+		gamma = np.max((np.abs(H[i, i]), gamma)) 
 		for j in range(i+1, ndim): 
 			xi = max(np.abs(H[i, j]), xi) 
 

@@ -2,6 +2,7 @@ import numpy as np
 from scipy.optimize import fmin_bfgs
 from scipy.optimize import fmin_l_bfgs_b
 from dyn import *
+from la_tools import *
 
 
 def P_int(f,X,Xp1,param):
@@ -10,8 +11,9 @@ def P_int(f,X,Xp1,param):
 	dt = param.dt
 	if np.abs(g) < 1.0e-12:
 		g=1.0
-
-	P = np.linalg.norm( Xp1 - X - dt * f(X,param) )**2.0 / (2.0 * dt * g * g)
+	fX = f(X,param)
+	P = mdot((Xp1-X - dt*fX, param.Gm1,Xp1[:,np.newaxis]-X[:,np.newaxis] - dt*fX[:,np.newaxis]))
+#	P = np.linalg.norm( Xp1 - X - dt * f(X,param) )**2.0 / (2.0 * dt * g * g)
 #	print(P)
 	return P
 #	return 0.0
@@ -21,23 +23,25 @@ def P_obs(h,X,y,param):
 	s=param.s
 	if np.abs(s) < 1.0e-12:
 		s=1.0
-	P = np.linalg.norm(h(X,param) - y)**2.0 / (2.0  * s * s)
+#	P = np.linalg.norm(h(X,param) - y)**2.0 / (2.0  * s * s)
+	hX = h(X,param)
+	P = mdot((hX - y, param.Sm1,hX[:,np.newaxis]-y[:,np.newaxis]))
 	return P
 
 def F_intermediary(u,param):
 # cancel noise for that part
 	g = param.g
-	param.g = 0.0
+	param.is_g = 0.0
 	unp1 = Newton_step(u,param)
-	param.g = g
+	param.is_g = 1.0
 	return (unp1-u)/param.dt
 
 def Observable_intermediary(u,param):
 # cancel noise for that part
 	s = param.s
-	param.s = 0.0
+	param.is_s = 0.0
 	y = Observable(u,param)
-	param.s = s
+	param.is_s = 1.0
 	return y
 
 def Functionnal_IPF(p,param):
@@ -54,21 +58,30 @@ def Functionnal_IPF(p,param):
 
 def Jacob_Functionnal_IPF(p,param):
 # Jacob of Functional to minimize
-	F = np.zeros(param.nx,param*nt)
+	nt = param.nt
+	nx = param.nx
+	F = np.zeros((nx,nt))
 	h = Observable_intermediary
 	f = F_intermediary
-	nt = param.nt
+
+	
 	X = p.reshape(param.nx,param.nt)
+	
 	for i in range(nt-1): #DA: t=0 included
 		#J = 2*(df/dxn+1 + df/dx) * (GG^T)-1 * f
-		F[:,i] = 2.0 * JF_int(X[:,i]) * param.GG * F_int(f,X[:,i],X[:,i+1],param)
-		F[:,i] += 2.0 * JF_obs(X) * param.SS * F_obs(h,X[:,i],param.obs[:,i],param)
+		JFGG = np.dot(JF_int(X[:,i],param), param.GG) * (2*param.dt * param.g * param.g)
+		F[:,i] = 2.0 * np.dot( JFGG, F_int(f,X[:,i],X[:,i+1],param) )
+		JFSS = np.dot( JF_obs(X[:,i],param) , param.SS) * (2* param.s * param.s)
+		F[:,i] += 2.0 * np.dot( JFSS,  F_obs(h,X[:,i],param.obs[:,i],param)   )
+	JFSS = np.dot( JF_obs(X[:,-1],param) , param.SS) * (2* param.s * param.s)
+	F[:,-1] += 2.0 * np.dot( JFSS,  F_obs(h,X[:,-1],param.obs[:,-1],param)   )
 	F = F.flatten()
-
-	return -1.0 * F
+#	print(np.max(F))
+	return 1.0 * F
 
 def F_int(f,X,Xp1,param):
 #Xnp1-f(Xn)
+	g = param.g
 	if np.abs(g) < 1.0e-12:
 		g=1.0
 	dt = param.dt
@@ -79,13 +92,14 @@ def F_int(f,X,Xp1,param):
 
 def JF_int(X,param):
 # D(Xnp1-f(Xn))
+	g = param.g
 	if np.abs(g) < 1.0e-12:
 		g=1.0
 	dt = param.dt
 	dx = param.dx
 	nu = param.nu
 	xm1 = np.append(X[-1],X[0:-1])
-	JF = np.diag(2.0*X - xm1)/dx -  nu*( np+diag(np.ones(X.size-1),1) - 2.0*np.diag(np.ones(X.size) + np.diag(np.ones(X.size-1),-1))  /(dx*dx)  
+	JF = np.diag( 2.0*X - xm1 ) / dx - nu * (np.diag( np.ones(  X.size-1  ),1 ) - 2.0*np.diag( np.ones(  X.size  ) + np.diag(  np.ones(   X.size-1   ),-1  ) )) / (dx*dx)
 	JF[0,-1] = -nu/(dx * dx)
 	JF[-1,0] = -nu/(dx * dx)
 	JF = np.zeros((X.size,X.size))
@@ -95,6 +109,7 @@ def JF_int(X,param):
 	return JF
 
 def F_obs(h,X,y,param):
+	g = param.g
 	if np.abs(g) < 1.0e-12:
 		g=1.0
 	dt = param.dt
@@ -103,10 +118,11 @@ def F_obs(h,X,y,param):
 	return F
 
 
-def JF_obs(X):
+def JF_obs(X,param):
 	JF = np.eye(X.size)
 #	print(P)1
 	return JF
+
 def Hessian_IPF(p,param):
 	H = np.zeros(2)
 	print('approx with Jacob ?')
@@ -183,22 +199,40 @@ def Hessianm1(X0,param,dx=0.01):
 
 	return np.linalg.pinv(H)
 
-def Grad_Functional_IPF(X,param):
+def Hess_deriv(X,param):
+	pass
+
+
+
+def Hess_gradiant(X,param):
 # TO DO: derive directly the hessian and the gradient of the functional ?
 	nu = param.nu
 	nx = param.nx
 	nt = param.nt
-	DJ = np.zeros(X.size)
-	for ix in range(nx):
-		for it in range(nt):
-			pass
-def Hess_Functional_IPF(X,param):
-# TO DO: derive directly the hessian and the gradient of the functional ?
-	nu = param.nu
-	nx = param.nx
-	nt = param.nt
-	H = np.zeros(X.size,X.size)
-	for ix in range(nx):
-		for it in range(nt):
-			pass
+	H = np.eye(X.size)
+#	H = np.zeros((X.size,X.size))
+	Id = np.eye(X.size)
+	Xp = X.flatten()  #+ 0.1*np.random.normal(0,1,X.size)
+	Jp = -1.0*Jacob_Functionnal_IPF(X,param)
+	for ih in range(100):
+		nJ = np.linalg.norm(Jp)
+		s = 'log func: ' +str(np.log(Functionnal_IPF(Xp,param))) + ' norm grad: ' + str(nJ)
+		print(s)
+		if nJ<1e-8:
+			break
+		X = 1.0*Xp
+		J = 1.0*Jp
+		if ih ==0:
+			dX = -1.0*0.001*J
+		else:
+			dX = -1.0*0.000001*mdot((H,J))
+		Xp = X + dX
+		Jp = -1.0*Jacob_Functionnal_IPF(Xp,param)
+		Y = Jp-J
+
+		H = H + mdot((  dX[:,np.newaxis] - mdot((H,Y))[:,np.newaxis]  ,  dX[np.newaxis,:] - mdot((H,Y))[np.newaxis,:]  )) / mdot((  dX - mdot((H,Y))  ,  Y  ))
+#		print( mdot((  temp ,  Y  )))
+	return H,dX,Y
+
+
 

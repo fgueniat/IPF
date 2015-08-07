@@ -5,13 +5,18 @@ from scipy.optimize import fmin_l_bfgs_b
 import pickle as pk
 
 
+def Noise_dyn(param):
+	noise = param.dt * param.is_g * param.g * np.random.normal(0,1,param.nx)
+	return noise
+
 def Newton_step(un,param):
 # time integration of burgers, with newton iterations
 	unp1 = np.copy(un)
 	for i in range(5):
 		J = Jacob_F_newton(unp1,param)
 		F = F_newton(unp1,un,param)
-		unp1 = np.linalg.solve(J,np.dot(J,un)-F) + param.dt * param.g * np.random.normal(0,1,un.size)
+		noise = Noise_dyn(param)
+		unp1 = np.linalg.solve(J,np.dot(J,un)-F) + noise
 #		unp1[0] = unp1[-1]
 	return unp1
 
@@ -71,8 +76,13 @@ def Jacob_F_newton(unp1,param):
 #	print(J[-5:,-5:])
 	return J
 
+def Noise_obs(param):
+	noise = param.s * np.random.normal(0,1,param.nx)
+	return noise
+
 def Observable(u,param):
-	y = np.copy(u) + param.s*np.random.normal(0,1,u.size)
+	noise = Noise_obs(param)
+	y = np.copy(u) + noise
 	return y
 
 

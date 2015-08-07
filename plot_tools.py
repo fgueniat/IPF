@@ -160,6 +160,7 @@ class Paradraw():
 
 #plot style
 		self.marks = marks
+		self.mark = self.marks[0]
 		self.colmap = colmap
 
 #axis labels
@@ -226,17 +227,42 @@ def plot1(data,param):
 	fig,ax = plot2(data2,param)
 	return fig,ax
 
+
+def multiplot2bis(data,param):
+	
+	x = data[0]
+	y = data[1]
+
+	pylab.ion()
+	fig = pylab.figure()
+	ax = fig.add_subplot(111)
+	ax.plot( x, y, param.mark)
+	# set the limits of the plot to the limits of the data
+	Options(ax,(x,y),param)
+
+	return fig,ax
+
+def rawplot(data,param,fig,ax):
+	x = data[0]
+	y = data[1]
+
+	ax.plot( x, y, param.mark)
+	# set the limits of the plot to the limits of the data
+	Options(ax,(x,y),param)
+
+	return fig,ax
+
 def plot2(data,param):
 	x = data[0]
 	y = data[1]
 
 	pylab.ion()
 	fig = pylab.figure()
-	ax = fig.add_subplot(111) 
-	ax.plot( x, y, param.marks)
+	ax = fig.add_subplot(111)
+	ax.plot( x, y, param.mark)
 	# set the limits of the plot to the limits of the data
 	Options(ax,(x,y),param)
-	pylab.show()
+
 	return fig,ax
 
 def Options(ax,X,param,cbar = False):

@@ -50,7 +50,7 @@
 
 %%%%%%%%%% variables
 \newcommand{\obs}{y} % observable
-\newcommand{\point}{\gras{x}} % point in space phase
+\newcommand{\point}{\gras{u}} % point in space phase
 \newcommand{\res}{\gras{\xi}} % a residu
 \newcommand{\rpoint}{X}
 \newcommand{\error}{\epsilon} % an error
@@ -129,102 +129,6 @@ The moments of the estimated pdf, as in standard MCMC methods, might be used for
 In this article, the precision and accuracy of IPF are qualitatively shown
 and a roadmap for tackling the computational costs issue is proposed.
 
-%\input{tex_files/DA}%
-\section{4D-VAR}
-\subsection{Preliminaries}
-Let's consider the state vector $\point$ of a system of interest, evolving on the $\Nphaz$ manifold $\Ephaz $. This field is modelized through the set of equations $\fdyn$:
-
-\begin{equation}
-\fdyn(\point,\dot{\point},q,t) =0.
-\label{eq-system}
-\end{equation} 
-
-The model might not be perfect. Flaws can come, for instance, from
-uncertainties in the model parameters $q$ or in some initial conditions.
-Consequently, a functional $\costf$ is introduced, in order to fit the model
-by taking in account observations at hand:
-\begin{equation}
-\costf(\point,q) = \int_0^T  \costff(\point,q,t) dt.
-\label{eq-def_cost}
-\end{equation} 
-For instance, one may want to minimize the discrepancy between the model predictions and some observations $\obs$:
-$$\costff(\point,q,t) = \left|h(\point,q,t) - \obs(t)\right|^2$$ 
-
-In the data assimilation context, the initial conditions are actually derived from the array of parameters $q\in\mathbb{R}^{n_q}$, with a relation $g:\Ephaz\times\mathbb{R}^{n_q}\rightarrow\mathbb{R}$:
-$$g(\point(0),q) = 0.$$
-
-Minimizing $\costf$ gives the best initial conditions, in the sense that Eq.~\eqref{eq-system} will produce fields as compatible as possible with the observations.
-
-Efficient and reliable minimization methods, such as the BFGS\todo{ref}
-method, need the gradient of the functional with respect to the parameters.
-When $\Nphaz$ is large, approximating the gradient with finite differences
-becomes impractical. A powerful alternative to computing the gradient is to
-solve the adjoint equation\todo{ref}.
-\subsection{Computing the gradient of the cost functional}
-
-Identifying the minimum of the $\costf$ relies on the gradient of the
-functional with respect to the parameters:
-$D_q\costf = \frac{D\,\costf}{Dq}$. For that, one can introduce the
-Lagrangian $\lag$, associated with the two Lagrange parameters $\lambda$ and
-$\mu$:
-\begin{equation}
-  \lag\mypar{\point,\dot{\point},q,\lambda,\mu}
-  =
-  \int_0^T
-  \bigg[
-  \costff(\point,q,t) + \lambda^{\dagger}\fdyn(\point,\dot{\point},q,t)
-  \bigg] dt + \mu^{\dagger} g(\point(0),q) 
-\label{eq-lag}
-\end{equation}
-where $^{\dagger}$ is the transpose operator. Naturally, both $\point$ and $\dot{\point}$ are considered as variables.
-As $\fdyn$ and $g$ are null by construction, $\lambda$ and $\mu$ can be designed specifically to alleviate the computations.
-computations.
-The gradient $D_q\lag = \frac{D\lag}{Dq}$ of $\lag$ is
-\begin{equation}
-\begin{split}
-&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\partial_{\point}\costff(\point,q,t)d_q \point  +\partial_{q} \costff(\point,q,t) + \\
-& \qquad \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) d_q \point + \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point}  + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg]dt + \\
-& \qquad \mu^{\dagger} \partial_{\point(0)} g(\point(0),q) dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) .
-\end{split}
-\label{eq-deriv_lag}
-\end{equation}
-As a matter of facts, $D_q\lag = D_q \costf$.
-
-The term in $d_{\dot{\point}}$ cannot be easily estimated. An integration by parts gives:
-
-\begin{equation*}
-\begin{split}
-&\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = \\
-&\qquad [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt
-\end{split}
-\end{equation*}
-The term associated with $d_{\dot{\point}}$ can now be replaced in Eq.~\eqref{eq-deriv_lag}.
-Ordering terms in this equation leads to:
-
-\begin{equation}
-\begin{split}
-&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \\
-& \qquad \int_0^T  \bigg[  \mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}} d_q \point   +\\
-& \qquad \partial_{q} \costff(\point,q,t)    + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg] dt + \\
-& \qquad \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) }|_0 dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) + \mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)
-\end{split}
-\label{eq-deriv_ord}
-\end{equation}
-
-Proper choices for $\lambda$ and $\mu$ allow to simplify the expression of $D_q\lag$.
-The choice of $\lambda\mypar{T} = 0$ actually nullifies the term $\mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)$.
-Then, $\lambda$ can be chosen as the solution of the so-called adjoint equation:
-$$
-\mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}} = 0 
-$$
-integrated in backward time. 
-Finally, the Lagrange parameter $\mu$ is set so it nullifies the component associated with $dq_{\point(0)}$:
-$$ \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) }|_0 = 0.$$
-Then, computing $D_q\lag$, hence $ D_q\costf$, is achieved by the integration of:
-\begin{equation}
-D_q\costf\mypar{\point,q} = \int_0^T  \bigg[  \partial_{q} \costff(\point,q,t)    + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg] dt +   \mu^{\dagger} \partial_q g(\point(0),q).
-\label{eq-J_adj}
-\end{equation}
 
 
 
@@ -236,20 +140,28 @@ D_q\costf\mypar{\point,q} = \int_0^T  \bigg[  \partial_{q} \costff(\point,q,t)  
 \subsection{Burgers' equation}
 \label{ssec-burgers}
 The Burgers' equation \todo{stochastic part ?}is:
-$$ \partial_t \point + \frac{1}{2} \partial_z \point^2 - \nu \partial^2_{zz}\point = 0. $$
+$$ \partial_t \point + \frac{1}{2} \partial_x \point^2 - \nu \partial^2_{xx}\point = 0. $$
 $\point$ evolves on an $\Nphaz$-dimensional manifold $\Ephaz$. 
 We consider that it has been spatially discretized. The field $\point$ can hence be modelized by $\hat{\point}$ through a set of ordinary differential equations $ \fdyn(\hat{\point},\dot{\hat{\point}},q,t) =0.$
 $$ \dot{\hat{\point}} + L(\hat{\point},q,t) + NL(\hat{\point},q,t) = 0 \equiv \fdyn(\hat{\point},\dot{\hat{\point}},q,t), $$
 where $q\in \mathbb{R}^{q}$ are the parameters of the model.
-The solution is discretized with $n_x$ points linearly spaced: $\hat{\point}\in \mathcal{R}^{n_x}$, following an implicit scheme, in order to solve the time integration by Newton iterations. 
+The solution is discretized with $n_x$ points linearly spaced: $\hat{\point}\in \mathcal{R}^{n_x}$.
 The advection part is approached by a backward difference scheme.
 Acting as a regularization force, the viscosity actually makes this scheme stable, as no shock can occur in the considered working range. \todo{reformulate this sentence}.
 The dissipation part is approached by a central difference scheme.
 The $\hat{\,}$ symbol is dropped in the following for the sake of readability:
 \begin{equation}
- \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0.
-\label{eq-fdyn_burgers}
+ \frac{\text{d}\point_i}{\text{d}t} + \point_i \frac{\point_i - \point_{i-1}}{\Delta x} - \nu \frac{\point_{i+1} -2 \point_i + \point_{i-1}}{\Delta x ^2} = 0.
+\label{eq-fdyn_burgers_spatial}
 \end{equation}
+
+The time discretization follows an implicit scheme, in order to solve the time integration by Newton iterations:
+\begin{equation}
+ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta x} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta x ^2} = 0.
+\label{eq-fdyn_burgers_temporal}
+\end{equation}
+
+
 More information about the partial derivatives needed for solving the adjoint equation can be found in Sec.~\ref{an-burgers}.
 \begin{figure}[t]
 \center
@@ -258,27 +170,27 @@ More information about the partial derivatives needed for solving the adjoint eq
 \label{fig-rmap}
 \end{figure}
 
-
-\subsection{Shallow water equations}  \label{ssec-swe}
-\todo{We consider the \todo{SWE} equations (in its Ito form ?):
-\begin{equation}
-\begin{array}{lll}
-\partial_t u & =& - u \partial_x u - v \partial_y u - f\,v - g \partial_x h -b\,u\\ 
-\partial_t v & =& - u \partial_x v - v \partial_y v + f\,u - g \partial_y h -b\,v\\
-\partial_t h & =& - \partial_x \mypar{\mypar{H+h}u} - \partial_y \mypar{\mypar{H+h}v}, \\
-\end{array}
-\label{eq-swe}
-\end{equation} 
-\todo{Ito ?} 0where $u$ and $v$ are the surface velocity, $h$ (resp. $H$) is the deviation of height (resp. mean height) from the botton. $f$ is the Coriolis coefficient and $\nu$ is the viscous drag coefficient. $g$ is the acceleration due to gravity.
-This equation is spatially discretized.}
-
-\begin{figure}[t]
-\center
-\includegraphics[height=.35\linewidth]{./SWE.eps}
-\caption{\small Illustration of the initial conditions of the Shallow Water system.}
-\label{fig-rmap}
-\end{figure}
-
+\iffalse
+		\subsection{Shallow water equations}  \label{ssec-swe}
+		\todo{We consider the \todo{SWE} equations (in its Ito form ?):
+		\begin{equation}
+		\begin{array}{lll}
+		\partial_t u & =& - u \partial_x u - v \partial_y u - f\,v - g \partial_x h -b\,u\\ 
+		\partial_t v & =& - u \partial_x v - v \partial_y v + f\,u - g \partial_y h -b\,v\\
+		\partial_t h & =& - \partial_x \mypar{\mypar{H+h}u} - \partial_y \mypar{\mypar{H+h}v}, \\
+		\end{array}
+		\label{eq-swe}
+		\end{equation} 
+		\todo{Ito ?} 0where $u$ and $v$ are the surface velocity, $h$ (resp. $H$) is the deviation of height (resp. mean height) from the botton. $f$ is the Coriolis coefficient and $\nu$ is the viscous drag coefficient. $g$ is the acceleration due to gravity.
+		This equation is spatially discretized.}
+		
+		\begin{figure}[t]
+		\center
+		\includegraphics[height=.35\linewidth]{./SWE.eps}
+		\caption{\small Illustration of the initial conditions of the Shallow Water system.}
+		\label{fig-rmap}
+		\end{figure}
+\fi
 
 %\input{tex_files/IPF_algo}
 \section{Particle methods and importance sampling}
@@ -290,14 +202,12 @@ d \point\mypar{t} = \flot\mypar{\point\mypar{t}}dt + \gras{G}dW, \qquad \point \
 \label{eq-dyn}
 \end{equation}
 where $\point$ is the state of the system, $\flot:\Ephaz \rightarrow \Ephaz$
-is the flow operator, $dW$ is a an $\Nphaz$-dimensional Brownian motion
-(Wienner process), and $\gras{G}$ an $\Nphaz\times \Nphaz$ diffusion matrix.
-With a proper time scheme\footnote{Kloeden, P. E., Platen, E. (1999).
+is the flow operator, $dW$ is a an $\Nphaz$-dimensional stochastic process\footnote{\emph{i.e.}, a Brownian motion or a Wienner process, but others processes are possible}, and $\gras{G}$ an $\Nphaz\times \Nphaz$ diffusion (covariance) matrix.
+With a proper discretization scheme, see Eq.~\eqref{eq-fdyn_burgers_temporal} \footnote{Kloeden, P. E., Platen, E. (1999).
   Numerical solution of stochastic differential equations. Berlin:
-  Springer,\\ Klauder Petersen scheme} associated with a time step
-$\delta t$, Eq.~\eqref{eq-dyn} becomes
+  Springer,\\ Klauder Petersen scheme} associated with a time step $\Delta t$, Eq.~\eqref{eq-dyn} becomes
 \begin{equation}
-\point\mypar{t_0+\mypar{n+1}\delta t} =  \fint\mypar{\point\mypar{t_0+n\delta t}}+\gras{G}\sqrt{\delta t} E,
+\point\mypar{t_0+\mypar{n+1}\Delta t} =  \fint\mypar{\point\mypar{t_0+n\Delta t}}+\gras{G}\sqrt{\delta t} E,
 \label{eq-TM}
 \end{equation}
 where $E$ is an $\Nphaz$-dimensional realization of the Wiener process. 
@@ -305,18 +215,15 @@ This model is to be understand as space and time discretization of a set of part
 
 Let $h:\Ephaz \rightarrow \mathbb{R}^{\Nm}$ be a sensor function, so an observation on the system is:
 \begin{equation}
- \obs(t) = h\mypar{x,t} + \sqrt{\gras{S}}Y,
+ \obs(t) = h\mypar{\point,t} + \sqrt{\gras{S}}Y,
 \label{eq-obs}
 \end{equation}
 where $Y$ is an $\Nm$-dimensional, standard-normal random variable and
 $\sqrt{\gras{S}}$ a covariance matrix. Let's also consider, without any loss
 of generality, that $\gras{G} = g \gras{Id}$ and
 $\sqrt{\gras{S}} = \sqrt{s} \gras{Id}$. In the following, the time will be
-discretized accordingly to $\delta t$. For any variable $\star$,
+discretized accordingly to $\Delta t$. For any variable $\star$,
 $ \star\mypar{t_0+n\delta t}$ will be shortened as $ \star_n$.
-
-
-
 
 
 \subsection{Probabilities derived from the Ito formulation}
@@ -327,7 +234,7 @@ The probability that the $\Nphaz$-dimensional random variable $\rpoint^{n+1}$ co
 $$P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} = P\mypar{\rpoint^{n+1}|\point_n}.$$ 
 This probability only depends on the system equations, \emph{i.e.} Eqs.~\eqref{eq-dyn} and \eqref{eq-TM}. When dealing with a Wiener process, the conditional probability is:
 \begin{equation}
-P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} \propto \exp \mypar{- \norme{\rpoint^{n+1} - \fint\mypar{\point_n}}^2/2\delta t g^2}.
+P^{\point_n,n+1}_{int}\mypar{\rpoint^{n+1}} \propto \exp \mypar{- \norme{\rpoint^{n+1} - \fint\mypar{\point_n}}^2/2\Delta t g^2}.
 \label{eq-proba_int}
 \end{equation}
 Note that if the noise is not Gaussian (\emph{i.e.} not described by a Wiener process), it only affects the right side of Eq.~\eqref{eq-proba_int}.
@@ -588,7 +495,7 @@ Three main parameters are allowed to variate: the noises in the model g, the noi
 
 \subsubsection{accuracy}
 The uncertainties are, firstly, chosen to be uncorrelated Gaussian components. $\Ns=20$ spatial points were used for the spatial discretization, and $\Nsnap = 3$ snapshots are considered. 
-Interestingly, noises in the model have a very low impact on the IPF results, compare to noises in the measurements.
+Interestingly, noises in the model have a very low impact on the IPF results, compare to noises in the measurements, see Figs~\ref{fig-err} and \ref{fig-std}. Quantitative results are presented in Tab.~\ref{tab-mean_errors_burgers} and \ref{tab-std_errors_burgers}.
 
 \begin{table}[h!]
 \caption{
@@ -645,16 +552,115 @@ $ g=      1.0\times 10^{-2}$ & $1.0\times 10^{-1}$ & $1.5\times 10^{-5}$ & $7.5\
 \bibliographystyle{ieeetr}
 \bibliography{small_biblio}
 \appendix
+
+%\input{tex_files/DA}%
+\section{4D-VAR}
+\subsection{Preliminaries}
+Let's consider the state vector $\point$ of a system of interest, evolving on the $\Nphaz$ manifold $\Ephaz $. This field is modelized through the set of equations $\fdyn$:
+
+\begin{equation}
+\fdyn(\point,\dot{\point},q,t) =0.
+\label{eq-system}
+\end{equation} 
+
+The model might not be perfect. Flaws can come, for instance, from
+uncertainties in the model parameters $q$ or in some initial conditions.
+Consequently, a functional $\costf$ is introduced, in order to fit the model
+by taking in account observations at hand:
+\begin{equation}
+\costf(\point,q) = \int_0^T  \costff(\point,q,t) dt.
+\label{eq-def_cost}
+\end{equation} 
+For instance, one may want to minimize the discrepancy between the model predictions and some observations $\obs$:
+$$\costff(\point,q,t) = \left|h(\point,q,t) - \obs(t)\right|^2$$ 
+
+In the data assimilation context, the initial conditions are actually derived from the array of parameters $q\in\mathbb{R}^{n_q}$, with a relation $g:\Ephaz\times\mathbb{R}^{n_q}\rightarrow\mathbb{R}$:
+$$g(\point(0),q) = 0.$$
+
+Minimizing $\costf$ gives the best initial conditions, in the sense that Eq.~\eqref{eq-system} will produce fields as compatible as possible with the observations.
+
+Efficient and reliable minimization methods, such as the BFGS\todo{ref}
+method, need the gradient of the functional with respect to the parameters.
+When $\Nphaz$ is large, approximating the gradient with finite differences
+becomes impractical. A powerful alternative to computing the gradient is to
+solve the adjoint equation\todo{ref}.
+\subsection{Computing the gradient of the cost functional}
+
+Identifying the minimum of the $\costf$ relies on the gradient of the
+functional with respect to the parameters:
+$D_q\costf = \frac{D\,\costf}{Dq}$. For that, one can introduce the
+Lagrangian $\lag$, associated with the two Lagrange parameters $\lambda$ and
+$\mu$:
+\begin{equation}
+  \lag\mypar{\point,\dot{\point},q,\lambda,\mu}
+  =
+  \int_0^T
+  \bigg[
+  \costff(\point,q,t) + \lambda^{\dagger}\fdyn(\point,\dot{\point},q,t)
+  \bigg] dt + \mu^{\dagger} g(\point(0),q) 
+\label{eq-lag}
+\end{equation}
+where $^{\dagger}$ is the transpose operator. Naturally, both $\point$ and $\dot{\point}$ are considered as variables.
+As $\fdyn$ and $g$ are null by construction, $\lambda$ and $\mu$ can be designed specifically to alleviate the computations.
+computations.
+The gradient $D_q\lag = \frac{D\lag}{Dq}$ of $\lag$ is
+\begin{equation}
+\begin{split}
+&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \int_0^T  \bigg[\partial_{\point}\costff(\point,q,t)d_q \point  +\partial_{q} \costff(\point,q,t) + \\
+& \qquad \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) d_q \point + \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point}  + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg]dt + \\
+& \qquad \mu^{\dagger} \partial_{\point(0)} g(\point(0),q) dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) .
+\end{split}
+\label{eq-deriv_lag}
+\end{equation}
+As a matter of facts, $D_q\lag = D_q \costf$.
+
+The term in $d_{\dot{\point}}$ cannot be easily estimated. An integration by parts gives:
+
+\begin{equation*}
+\begin{split}
+&\int_0^T\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)d_q \dot{\point} dt = \\
+&\qquad [\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) d_q \point ]_0^T - \int_0^T \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}d_q \point dt
+\end{split}
+\end{equation*}
+The term associated with $d_{\dot{\point}}$ can now be replaced in Eq.~\eqref{eq-deriv_lag}.
+Ordering terms in this equation leads to:
+
+\begin{equation}
+\begin{split}
+&D_q\lag\mypar{\point,\dot{\point},q,\lambda,\mu} = \\
+& \qquad \int_0^T  \bigg[  \mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}} d_q \point   +\\
+& \qquad \partial_{q} \costff(\point,q,t)    + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg] dt + \\
+& \qquad \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) }|_0 dq_{\point(0)}  + \mu^{\dagger} \partial_q g(\point(0),q) + \mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)
+\end{split}
+\label{eq-deriv_ord}
+\end{equation}
+
+Proper choices for $\lambda$ and $\mu$ allow to simplify the expression of $D_q\lag$.
+The choice of $\lambda\mypar{T} = 0$ actually nullifies the term $\mya{\lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t)}|_T d_q \point(T)$.
+Then, $\lambda$ can be chosen as the solution of the so-called adjoint equation:
+$$
+\mypar{\partial_{\point}\costff(\point,q,t) + \lambda^{\dagger} \partial_{\point}  \fdyn(\point,\dot{\point},q,t) - \mya{\dot{\lambda}^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) + \lambda^{\dagger}d_t\partial_{\dot{\point}}\fdyn(\point,\dot{\point},q,t)}} = 0 
+$$
+integrated in backward time. 
+Finally, the Lagrange parameter $\mu$ is set so it nullifies the component associated with $dq_{\point(0)}$:
+$$ \mya{\mu^{\dagger} \partial_{\point} g(\point,q) - \lambda^{\dagger}\partial_{\dot{\point}} \fdyn(\point,\dot{\point},q,t) }|_0 = 0.$$
+Then, computing $D_q\lag$, hence $ D_q\costf$, is achieved by the integration of:
+\begin{equation}
+D_q\costf\mypar{\point,q} = \int_0^T  \bigg[  \partial_{q} \costff(\point,q,t)    + \lambda^{\dagger}\partial_q\fdyn(\point,\dot{\point},q,t) \bigg] dt +   \mu^{\dagger} \partial_q g(\point(0),q).
+\label{eq-J_adj}
+\end{equation}
+
+
 \section{Burgers' equation and adjoint equations}
 \label{an-burgers}
 We recall here the expression from Eq.~\eqref{eq-fdyn_burgers}:
-$$ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta z} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta z ^2} = 0 $$
+$$ \frac{\point^{n+1}_i - \point^{n}_i}{\Delta t} + \point^{n+1}_i \frac{\point^{n+1}_i - \point^{n+1}_{i-1}}{\Delta x} - \nu \frac{\point^{n+1}_{i+1} -2 \point^{n+1}_i + \point^{n+1}_{i-1}}{\Delta x ^2} = 0 $$
 The route "discretization then adjoint" is hence followed.
 
 As a matter of fact, the $i$th component of $\fdyn$ is:
-$$\fdyn_i\mypar{\point,\dot{\point},q,t} = \dot{\point_i} + \point_i \frac{\point_i - \point_{i-1}}{\Delta z} - \nu \frac{\point_{i+1} -2 \point_i + \point_{i-1}}{\Delta z ^2}. $$
+$$\fdyn_i\mypar{\point,\dot{\point},q,t} = \dot{\point_i} + \point_i \frac{\point_i - \point_{i-1}}{\Delta x} - \nu \frac{\point_{i+1} -2 \point_i + \point_{i-1}}{\Delta x ^2}. $$
 Consequently, the partial derivatives with respect to $\point$ are
-$$\partial_{\point_j} \fdyn_i\mypar{\point,\dot{\point},q,t} = \frac{1}{\Delta z }\mypar{2 \point_i \delta_{i,j} - \delta_{i-1,j}} + \frac{1}{\Delta z ^2}\mypar{\delta_{i+1,j} - 2 \delta_{i,j} + \delta_{i+1,j}}.$$
+$$\partial_{\point_j} \fdyn_i\mypar{\point,\dot{\point},q,t} = \frac{1}{\Delta x }\mypar{2 \point_i \delta_{i,j} - \delta_{i-1,j}} + \frac{1}{\Delta x ^2}\mypar{\delta_{i+1,j} - 2 \delta_{i,j} + \delta_{i+1,j}}.$$
 The partial derivative with respect to $\dot{\point}$ is
 $$\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = Id,$$
 and then $$dt\partial_{\dot{\point}} \fdyn\mypar{\point,\dot{\point},q,t}  = 0. $$
